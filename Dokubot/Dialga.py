@@ -30,6 +30,7 @@ from nltk import ngrams
 from collections import Counter
 import pandas as pd
 import re
+from string import digits
 
 def text_cleaner(text: str) -> str:
     # Remove: punctuations, URLs, numbers, unnecesary or unknown symbols
@@ -47,7 +48,7 @@ def text_cleaner(text: str) -> str:
     text = re.sub(r"\S*https?:\S*", "", text) # remove links
     text = re.sub(r"\S*@?:\S*", "", text)  # remove links
 
-    #text = text.translate(str.maketrans('', '', string.digits)) # remove digits
+    #text = text.translate(str.maketrans('', '', digits)) # remove digits
     #text = text.translate(str.maketrans('', '','!@#$%^&*()[]{};/<>`~-=_+|')) # remove punctuation
     text = text.replace(r"!?@#$%^&*()[]{};/<>\|`~-=_+", "")
     text = text.replace(r",", ", ")
@@ -63,7 +64,8 @@ greetings = ["Cześć, jakiego dokumentu szukasz?", "Hejka, jakiego dokumentu dz
              "Elo byq, jaki dokumencik zapodać?", "Miło cię widzieć, jakiego dokumentu szukasz?"]
 retry_responses = ["Spróbujmy jeszcze raz...", "It's rewind time!", "Od nowa!", "Jeszcze jeden raz!",
                    "Odwracam biegunowość!"]
-ask_for_doc = ["To co podać?", "No to jaki dokumencik?", "No to czego szukamy tym razem?", "Pokazać ci moje towary?"]
+ask_for_doc = ["To co podać?", "No to jaki dokumencik?", "No to czego szukamy tym razem?", "Pokazać ci moje towary?",
+               "To o czym myślisz?", "Masz pomysł co chciałbyś przeczytać?"]
 greet_reactions = [":)", ":-)", ":>", "OwO", "( ͡ʘ ͜ʖ ͡ʘ)", "(͠≖ ͜ʖ͠≖)", "( ͡ᵔ ͜ʖ ͡ᵔ )"]
 UNI_found = ['Nie rozumiem, to w końcu jak ma być: ', "A z tym to jak: ", "Coś jest nie tak, miało być: ", "Bo tutaj jest błąd, chodzi Ci o: "]
 SCL_found = ['Powoli, bo nie rozumiem, o którą wersję Ci chodzi?', "Już już, tylko jak to rozczytać?", "O co dokładnie tutaj chodzi?"]
@@ -84,6 +86,13 @@ negation = ['nie', 'nope', 'obojętenie', 'nie mam', 'nie wiem', 'nie chcę', 'n
 
 greet = ['cześć', 'siemka', 'elo elo', 'witam', 'no witam', 'gitara siema', 'czołem', 'siemandero', 'elo', 'hej',
          'czółko', 'strzałka', 'elo byku', 'elo byq',' dzień dobry', 'dobry', 'witam witam', 'dobry wieczór']
+
+select_all = ['wszystkie', 'pokaż wszystkie', 'podeślij wszystkie', 'daj wszystkie', 'mogą być wszystkie', 'pokaż całość',
+              'całość', 'każdy', 'pokaż co masz']
+select_best = ['daj nalepszy', 'podeślij najlepszy', 'najbardziej pasujący', 'najlepszy', 'tylko najlepszy', 'pokaż mi tylko najlepszy',
+               'daj mi tylko najlepszy', 'podeślij mi najbardziej pasujący', 'podeślij mi najlepszy', 'daj mi najlepszy',
+               'daj mi najbardziej pasujący']
+ask_tag = ['To jaki tag dodajemy?', 'To co dadać?', 'Jaki tag wariacie?', 'To o jakim tagu myślisz?', 'Napisz mi tag do dodania']
 
 class Dialog(Dokubot):
 
@@ -193,13 +202,24 @@ class Dialog(Dokubot):
     def long_key_recombobulator(self, key:KeyToken):
         full_s = ["(", "("]
         key_len = len(key.tokens)
-        #ng = ngrams(KeyToken.lemma.split(), key_len-1)
+        #ng = ngrams(key.lemma.split(), 2)
+        #a = list(ng)
         if key_len > 1:
             for i in range(len(key.tokens)-1):
                 full_s.append(KeyToken([key.tokens[i]]))
                 full_s.append(LogicToken.artifical(logic="OR"))
             full_s.append(KeyToken([key.tokens[-1]]))
-        full_s.extend([")"]) #,LogicToken.artifical(logic="OR"), key, ")"])
+        full_s.append(")")
+        if key_len > 2:
+            full_s.append(LogicToken.artifical(logic="OR"))
+            full_s.append("(")
+            for i in range(len(key.tokens)-2):
+                full_s.append(KeyToken([key.tokens[i],key.tokens[i+1]]))
+                full_s.append(LogicToken.artifical(logic="OR"))
+            full_s.append(KeyToken([key.tokens[-2], key.tokens[-1]]))
+            full_s.append(")")
+
+        full_s.extend([LogicToken.artifical(logic="OR"), key, ")"])
         return full_s
 
     def filter_in_data(self, df, key):
@@ -219,7 +239,7 @@ class Dialog(Dokubot):
         sql_query_key = """(EXISTS (SELECT 1 FROM "Keyword" WHERE "Document".id = "Keyword".document_id AND "Keyword"."key" = '%s'))"""
 
         prepr_q = []
-        for keyw in self.key_query[1]:
+        for keyw in self.key_logic[1]:
             if isinstance(keyw, KeyToken):
                 if len(keyw.tokens) > 1:
                     prepr_q.extend(self.long_key_recombobulator(keyw))
@@ -266,7 +286,7 @@ class Dialog(Dokubot):
             docs.append(doc)
             doc = {'id': None, 'title': None, 'type': None, 'score': None, 'keywords': [], 'keywords_scores': []}
 
-        return pd.DataFrame(docs), count, Counter(all_keys)[:5]
+        return pd.DataFrame(docs), count, Counter(all_keys).most_common()
 
 
     def service(self, logic, essence, op_type):  # UNI_D, NO_D, SCL_D, CL_D

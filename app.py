@@ -4,7 +4,7 @@ from flask_socketio import SocketIO
 import Dokubot.Dialga as DD
 import random
 import pandas as pd
-
+from collections import Counter
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://lukasz:12345@localhost/Dokubot'
@@ -41,7 +41,9 @@ essence_num = 0
 pref_doc_asked = False
 uni_type = None
 found_data = None
-
+found_updated = None
+frequent = None
+all_keys = None
 
 class Document(db.Model):
     __tablename__ = 'Document'
@@ -68,31 +70,39 @@ def index():
 
 @app.route("/get")
 def get_bot_response():
-    global current_essence, essence_num, UNI_questions, pref_doc_asked, uni_type, stage, stop_flag, found_data
+    global current_essence, essence_num, UNI_questions, pref_doc_asked, uni_type, stage, stop_flag, found_data, \
+        found_updated, frequent, all_keys
+
     userText = request.args.get('msg')
     if userText == 'restart':
         Dialog.reset()
         stage = 'start'
-        stop_flag = True
         current_essence = 0
         UNI_questions = []
+        stop_flag = False
         essence_num = 0
         pref_doc_asked = False
         uni_type = None
+        found_data = None
+        found_updated = None
+        frequent = None
+        all_keys = None
 
         return jsonify([random.choice(DD.retry_responses), random.choice(DD.greet_reactions),
                         random.choice(DD.ask_for_doc)])
     else: stop_flag = False
 
     while not stop_flag:
-
+        if userText == 'stop':
+            return "Zatrzymano, jeśli wystąpił jakiś problem wpisz 'restart' by zacząć od nowa."
         if stage == 'start' and userText != 'restart':
             if Dialog.isgreet(userText):
                 return jsonify([random.choice(DD.greet_reactions), random.choice(DD.ask_for_doc)])
             else:
                 sentence = Dialog.extract(DD.text_cleaner(userText))
-                essence_num = len(sentence.essence)
-                Dialog.essence.append(sentence.essence[current_essence])
+                essence_num = len(sentence.essence)-1
+                for i in range(essence_num+1):
+                    Dialog.essence.append(sentence.essence[i])
                 stage = 'preprocess_doc'
 
         if stage == 'preprocess_doc':
@@ -113,7 +123,7 @@ def get_bot_response():
                 Dialog.doc_logic_all.append(Dialog.doc_logic)
                 stage = 'preprocess_key'
 
-        b = stage
+        aa = Dialog
         if stage == 'preprocess_key':
             uni_type = 'keys'
             if Dialog.key_logic[0] != 'CL':
@@ -151,17 +161,202 @@ def get_bot_response():
         # get data from db and start narrowing
         if stage == 'search_narrowing':
             aa = Dialog
-            if not found_data:
+            f = found_data
+            if found_data is None:
                 query, all_keys = Dialog.keys_to_query()
-                # get query data TODO
-                query_got = []
-                found_all, count, frequent = Dialog.prep_query_data(query_got, all_keys)
+                query = db.text(query)
+                req = db.session.query(Document).from_statement(query)
 
-            #ask for custom key if count >100
-            #ask to choose if keys < ~30 (keep it or get rid of it)
-            #sort score and doc types
-            #output
-            # print best docs, get info if doc selceted
+                found_data, count, frequent = Dialog.prep_query_data(req, all_keys)
+                f= frequent
+                found_updated = found_data.sort_values('score', ascending=False)
+
+                question = "Udało mi się znaleźć %i pasujących wyników, " % count
+            else:
+                found_updated = found_updated.sort_values('score', ascending=False)
+                found_updated = found_updated.reset_index(drop=True)
+                count = len(found_updated)
+                question = "No to mamy %i pasujących wyników, " % count
+
+            if count == 1:
+                out = ["To wszystko, jeśli potrzebujesz dodatkowych informacji o tej pozycji wpisz 'info'.",
+                 "Jeśli chcesz rozpocząć od momentu pierwszego wyszukiwania wpisz 'szukanie'.",
+                 "I jeszcze jedno - jeśli chcesz zacząć od nowa wpisz 'restart'",
+                 "To wszystko z mojej strony (´^ω^)ノ."]
+                out2 = ["Z tej części to tyle!", "Jeśli potrzebujesz dodatkowych informacji o tej pozycji wpisz 'info'.",
+                        "Jeśli chcesz rozpocząć od momentu pierwszego wyszukiwania wpisz 'szukanie'.",
+                        "A jeśli chcesz przejść od razu dalej to wpisz 'dalej'."]
+                stage = 'after_list'
+                question = "No to mamy tylko jeden wynik!"
+                if current_essence < essence_num:
+                    return jsonify([question, "1. " + found_updated.title.iloc[0] + "; Wskaźnik: " + str(found_updated.score.iloc[0])]+out2)
+                else:
+                    return jsonify([question, "1. " + found_updated.title.iloc[0] + "; Wskaźnik: " + str(found_updated.score.iloc[0])]+out)
+
+            if count < 5:
+                stage = 'list_results'
+                question += "podesłać wszystkie czy tylko najlepszy?"
+                return question
+
+            elif count > 5 and frequent[0][1] > 1:
+                stage = 'search_results'
+                question += 'co teraz robimy?'
+                qq =[question, "1. Pokaż kilka najlepszych", "2. Dodaj tag", "3. Pomóż mi zawęzić wyszukiwanie",
+                     "tutaj musisz wybrać numerek jak coś (˵ ͡~ ͜ʖ ͡°˵)ﾉ⌒♡*:･。."]
+                return jsonify(qq)
+
+            else:
+                stage = 'search_results'
+                question += 'co teraz robimy?'
+                qq = [question, "1. Pokaż kilka najlepszych", "2. Dodaj tag",
+                      "tutaj musisz wybrać numerek jak coś (˵ ͡~ ͜ʖ ͡°˵)ﾉ⌒♡*:･。."]
+                return jsonify(qq)
+
+        if stage == 'search_results':
+            try:
+                if int(userText) == 1:
+                    stage = 'list_results'
+                    userText = 'wszystkie'
+                elif int(userText) == 2:
+                    stage = 'add_tag'
+                    return random.choice(DD.ask_tag)
+                elif int(userText) == 3 and frequent[0][1]>1:
+                    stage = 'help_narrow_ask'
+                else:
+                    return "Tylko że takiego wyboru nie ma..."
+            except:
+                return ("Kolego, bo się pogniewamy")
+
+        if stage == 'add_tag':
+            df_added_tag = filter_in_data(found_updated, userText.lower())
+            if df_added_tag is None:
+                found_updated = df_added_tag
+                found_updated = found_updated.reset_index()
+                all_keys.append(userText.lower())
+                frequent = Counter(get_keys_from_pd(found_updated, all_keys)).most_common()
+                stage = 'search_narrowing'
+            else:
+                stage = 'tag_not_found'
+                return jsonify(["Nie znalazłem wyniku zawierającego szukany przez Ciebie tag!",
+                                'Wrócić do szukania?','tak/nie'])
+
+        if stage == 'tag_not_found':
+            if userText.lower() == 'tak':
+                stage = 'search_narrowing'
+            else:
+                return jsonify(["Zawiedliśmy.","Żeby zacząć od nowa wpisz 'restart'"])
+
+        if stage == 'help_narrow_ask':
+            if frequent:
+                if frequent[0][1] > 1 and frequent[0][1] != len(found_updated):
+                    question = "Czy dokument którego szukasz powinien zawierać tag '%s' czy nie?" %frequent[0][0]
+                    stage = 'help_narrow_answer'
+                    return jsonify([question, "tak/nie/nie wiem/powrót"])
+                else:
+                    stage = 'search_narrowing'
+            else:
+                stage = 'search_narrowing'
+
+        if stage == 'help_narrow_answer':
+            if userText.lower() == 'tak':
+                found_updated = filter_in_data(found_updated, frequent[0][0])
+                #found_updated = found_updated.reset_index()
+                all_keys.append(frequent[0][0])
+                frequent = Counter(get_keys_from_pd(found_updated, all_keys)).most_common()
+                stage = 'help_narrow_ask'
+            elif userText.lower() == 'nie':
+                found_updated = filter_not_in_data(found_updated, frequent[0][0])
+                #found_updated = found_updated.reset_index()
+                frequent = Counter(get_keys_from_pd(found_updated,all_keys)).most_common()
+                aa = frequent
+                stage = 'help_narrow_ask'
+            elif userText.lower() == 'nie wiem':
+                all_keys.append(frequent[0][0])
+                frequent.pop(0)
+                stage = 'help_narrow_ask'
+            elif userText.lower() == 'powrót':
+                stage = 'search_narrowing'
+            else:
+                return('Nie ma takiego wyboru!')
+
+        if stage == "after_list":
+            ut = userText.lower().split(' ')
+            if userText.lower() == 'dalej' and current_essence < essence_num:
+                current_essence += 1
+                stage = 'preprocess_doc'
+                found_data = None
+                found_updated = None
+                frequent = None
+                all_keys = None
+                Dialog.doc_logic = ['None']
+                Dialog.key_logic = ['None']
+            elif userText.lower() == 'szukanie':
+                found_data = None
+                found_updated = None
+                frequent = None
+                all_keys = None
+                stage = 'search_narrowing'
+            elif ut[0] == 'info':
+                if len(ut) == 1:
+                    rr = db.session.query(Document).get(int(found_updated.id.iloc[0]))
+                    tags = []
+                    for tag in rr.keywords:
+                        tags.append(tag.key)
+                    return jsonify(['Tytuł: ' + rr.title, "Autorzy: "+ rr.authors, 'Typ dokumentu:'+rr.doc_type,
+                                    'Tagi: ' + ' '.join(tags), "URL: " + rr.url])
+                try:
+                    if int(ut[1]) in range(1, len(found_updated)+1):
+                        rr = db.session.query(Document).get(int(found_updated.id.iloc[int(ut[1])-1]))
+                        tags = []
+                        for tag in rr.keywords:
+                            tags.append(tag.key)
+
+                        return jsonify(['Tytuł: ' + rr.title, "Autorzy: " + rr.authors, 'Typ dokumentu: ' + rr.doc_type,
+                                        'Tagi: ' + ' '.join(tags), "URL: " + rr.url])
+                    else:
+                        return "Zły numerek!"
+                except:
+                    return "Zły numerek!"
+            else:
+                return "Wybacz, nie rozumiem ╥﹏╥"
+
+        if stage == 'list_results':
+            if userText.lower() in DD.select_best:
+                stage = "after_list"
+                out = ["To wszystko, jeśli potrzebujesz dodatkowych informacji o tej pozycji wpisz 'info'.",
+                 "Jeśli chcesz rozpocząć od momentu pierwszego wyszukiwania wpisz 'szukanie'.",
+                 "I jeszcze jedno - jeśli chcesz zacząć od nowa wpisz 'restart'",
+                 "To wszystko z mojej strony (´^ω^)ノ."]
+
+                out2 = ["Z tej części to tyle!", "Jeśli potrzebujesz dodatkowych informacji o tej pozycji wpisz 'info'.",
+                        "Jeśli chcesz rozpocząć od momentu pierwszego wyszukiwania wpisz 'szukanie'.",
+                        "A jeśli chcesz przejść od razu dalej to wpisz 'dalej'."]
+                if current_essence < essence_num:
+                    return jsonify(["1. " + found_updated.title.iloc[0] + "; Wskaźnik: " + str(found_updated.score.iloc[0])]+ out2)
+                else:
+                    return jsonify(["1. " + found_updated.title.iloc[0] + "; Wskaźnik: " + str(found_updated.score.iloc[0])]+ out)
+
+            elif userText.lower() in DD.select_all:
+                docs_found = []
+                out = ["To wszystko, jeśli potrzebujesz dodatkowych informacji o danej pozycji wpisz 'info {numer_pozycji}'.",
+                       "Jeśli chcesz rozpocząć od momentu pierwszego wyszukiwania wpisz 'szukanie'.",
+                       "I jeszcze jedno - jeśli chcesz zacząć od nowa wpisz 'restart'",
+                       "To wszystko z mojej strony (´^ω^)ノ."]
+                out2 = ["Z tej części to tyle!", "Jeśli potrzebujesz dodatkowych informacji o danej pozycji wpisz 'info {numer_pozycji}.",
+                        "Jeśli chcesz rozpocząć od momentu pierwszego wyszukiwania wpisz 'szukanie'.",
+                        "A jeśli chcesz przejść od razu dalej to wpisz 'dalej'."]
+
+                for i in range(min(len(found_updated),10)):
+                    stage = "after_list"
+                    docs_found.append(str(i+1)+ ". " + found_updated.title.iloc[i] + "; Wskaźnik: " + str(found_updated.score.iloc[i]))
+
+                if current_essence < essence_num:
+                    return jsonify(docs_found + out2)
+                else:
+                    return jsonify(docs_found + out)
+
+            else:
+                return "Wybacz, nie zrozumiałem jeśli chcesz wszystkie wpisz 'wszystkie' jeśli najlepszy wpisz 'najlepszy'."
 
         # Getting additional information from user
         if stage == 'ask_pref_doc':
@@ -309,6 +504,25 @@ def service_solution_SCL(logic, user_choice):
         return False, "Opanuj się, tutaj masz tylko wybrać numerek"
 
     return True, logic
+
+def get_keys_from_pd(pd, all_keys):
+    all_key = []
+    for i, row in pd.iterrows():
+        all_key += [x for x in row.keywords if x not in all_keys]
+
+    return all_key
+
+def filter_in_data(df, key):
+    mask = df.keywords.apply(lambda x: key in x)
+    df2 = df[mask]
+    for index, row in df2.iterrows():
+        df2['score'][index] += row['keywords_scores'][row['keywords'].index(key)]
+    return df2
+
+def filter_not_in_data(df, key):
+    mask = df.keywords.apply(lambda x: key not in x)
+    df2 = df[mask]
+    return df2
 
 if __name__ == '__main__':
     app.run(debug=True)
