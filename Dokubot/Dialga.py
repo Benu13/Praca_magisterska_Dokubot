@@ -63,14 +63,27 @@ greetings = ["Cześć, jakiego dokumentu szukasz?", "Hejka, jakiego dokumentu dz
              "Elo byq, jaki dokumencik zapodać?", "Miło cię widzieć, jakiego dokumentu szukasz?"]
 retry_responses = ["Spróbujmy jeszcze raz...", "It's rewind time!", "Od nowa!", "Jeszcze jeden raz!",
                    "Odwracam biegunowość!"]
-ask_for_doc = ["To co podać?", "No to jaki dokumencik?", "No to czego szukamy tym razem?" "Pokazać ci moje towary?"]
+ask_for_doc = ["To co podać?", "No to jaki dokumencik?", "No to czego szukamy tym razem?", "Pokazać ci moje towary?"]
 greet_reactions = [":)", ":-)", ":>", "OwO", "( ͡ʘ ͜ʖ ͡ʘ)", "(͠≖ ͜ʖ͠≖)", "( ͡ᵔ ͜ʖ ͡ᵔ )"]
-UNI_found = ['Nie rozumiem, to w końcu jak ma być: ', "A z tym to jak: ", "Coś jest nie tak, miało być: "]
+UNI_found = ['Nie rozumiem, to w końcu jak ma być: ', "A z tym to jak: ", "Coś jest nie tak, miało być: ", "Bo tutaj jest błąd, chodzi Ci o: "]
 SCL_found = ['Powoli, bo nie rozumiem, o którą wersję Ci chodzi?', "Już już, tylko jak to rozczytać?", "O co dokładnie tutaj chodzi?"]
 wrong_choice = ["Nie ma takiego wyboru leszczu", "XD", "No już już, nie ma testowania", "Bo jeszcze znajdziesz błąd",
-                "Nie musisz szukać błędu, sam cię znajdzie", "Nie pędź tak proszę, daj odpocząć", "Żart...ale jak to?"]
+                "Opanuj się", "Nie pędź tak proszę, daj odpocząć", "Żart...ale jak to?", "Zagłada przybędzie z kanalizacji",
+                "Ale z ciebie jajcarz hehe"]
 no_tags = ['Można wiedzieć o czym?', 'Co dokładnie ma zawierać?', 'O czym szukasz tych dokumentów?',
            'A te dokumenty to o czym dokładnie mają być?']
+prep_ready = ['Oki doki', 'Już szukamy', 'No to działamy', 'Chyba rozumiem', 'Na tropie']
+ask_pref_doc = ['Jakieś konkretne typy dokumentów?', 'Masz może preferencje co do typu dokumentu?', 'Jakiś typ dokumentu czy obojętenie?']
+ask_for_keys = ['Hmm, a o czym dokładnie szukasz tych dokumnetów?', 'Można zapytać o czym?', 'Już się tym zajmuję, tylko powiedz jeszcze o czym?',
+                'Jaki temat tych dokumentów', 'Jakie tagi Cię interesują?', 'Można prosić coś więcej o temacie?']
+dead_end = ['Nie to nie', 'No trudno, bywaj', 'Alright then keep your secrets', 'W porządku', '¯\_(ツ)_/¯', '( ͠° ͟ʖ ͡°)']
+negation = ['nie', 'nope', 'obojętenie', 'nie mam', 'nie wiem', 'nie chcę', 'nie potrzebuję', 'dowolnie', 'zgadnij',
+            'domyśl się', 'nie podam', 'nie powiem', 'nie powiem ci', 'dowolnie', 'nie interesuje mnie to', 'niet',
+            'bynajmniej', 'nigdy', 'w żdanym razie', 'nie ma mowy', 'jeszcze czego', 'nic z tego', 'nie ma o czym mówić',
+            'broń boże', 'absolutnie', 'absolutnie nie', 'nic z tego', 'pod żadnym pozorem']
+
+greet = ['cześć', 'siemka', 'elo elo', 'witam', 'no witam', 'gitara siema', 'czołem', 'siemandero', 'elo', 'hej',
+         'czółko', 'strzałka', 'elo byku', 'elo byq',' dzień dobry', 'dobry', 'witam witam', 'dobry wieczór']
 
 class Dialog(Dokubot):
 
@@ -80,15 +93,38 @@ class Dialog(Dokubot):
         self.doc_form = None
         self.Doc_hom_flag = True
         self.LH = LogicHandler()
+        self.essence = []
 
         self.doc_established = False
         self.doc_query = None
         self.doc_all_flag = False
         self.doc_pref = []
+        self.doc_logic = ['None']
+        self.doc_logic_all = []
 
+        self.key_logic = ['None']
         self.key_established = False
         self.key_query = None
+        self.key_logic_all = []
 
+    def reset(self):
+        self.end_session = False
+        self.doc_form = None
+        self.Doc_hom_flag = True
+        self.LH = LogicHandler()
+        self.essence = []
+
+        self.doc_established = False
+        self.doc_query = None
+        self.doc_all_flag = False
+        self.doc_pref = []
+        self.doc_logic = ['None']
+        self.doc_logic_all = []
+
+        self.key_logic = ['None']
+        self.key_established = False
+        self.key_query = None
+        self.key_logic_all = []
 
     def start_conversation(self):
         print(random.choice(greetings))
@@ -105,18 +141,16 @@ class Dialog(Dokubot):
             for i in range(len(sentence.essence)):
                 essence = sentence.essence[i]
 
-                doc_logic = ['None']
-                key_logic = ['None']
-                while doc_logic[0] != 'CL':
-                    doc_logic = self.LH.solve(essence['doc_types'], essence['doc_operators'])
-                    doc_logic, essence = self.service(doc_logic, essence, 'docs')
-                self.doc_query = doc_logic
+                while self.doc_logic[0] != 'CL':
+                    self.doc_logic = self.LH.solve(essence['doc_types'], essence['doc_operators'])
+                    self.doc_logic, essence = self.service(self.doc_logic, essence, 'docs')
+                self.doc_query = self.doc_logic
                 self.doc_all_pref(essence['doc_types'])
 
-                while key_logic[0] != 'CL':
-                    key_logic = self.LH.solve(essence['keywords'], essence['key_operators'])
-                    key_logic, essence = self.service(key_logic, essence, 'keys')
-                self.key_query = key_logic
+                while self.key_logic[0] != 'CL':
+                    self.key_logic = self.LH.solve(essence['keywords'], essence['key_operators'])
+                    self.key_logic, essence = self.service(self.key_logic, essence, 'keys')
+                self.key_query = self.key_logic
 
                 if self.key_established:
                     sql_key_query = self.keys_to_query()
@@ -131,17 +165,24 @@ class Dialog(Dokubot):
                         self.end_session = True
 
     def doc_all_pref(self, docs):
-        for i in range(len(docs)):
-            if docs[i].origin in ['coś', 'czegoś', 'dokument', 'papier']:
-                if not self.doc_all_flag:
-                    self.doc_all_flag = True
+        if docs:
+            for i in range(len(docs)):
+                if docs[i].origin in ['coś', 'czegoś', 'dokument', 'papier']:
+                    if not self.doc_all_flag:
+                        self.doc_all_flag = True
+                    else:
+                        pass
                 else:
-                    pass
-            else:
-                self.doc_pref.append(docs[i])
+                    self.doc_pref.append(docs[i])
+
+    def isnegation(self, text):
+        if text.lower() in negation or len(text.split(' ')) < 2:
+            return True
+        else:
+            return False
 
     def isgreet(self, text):
-        if len(text.split(' ')) < 4:
+        if text.lower() in greet or len(text.split(' ')) < 2:
             return True
         else:
             return False
@@ -187,18 +228,20 @@ class Dialog(Dokubot):
             else:
                 prepr_q.append(keyw)
 
+        all_keys = []
         for key in prepr_q:
             if key in ["(",")"]:
                 sql_query += key
             elif isinstance(key, LogicToken):
                 sql_query += ' ' + key.logic + ' '
             elif isinstance(key, KeyToken):
+                all_keys.append(key.lemma)
                 key_subs = sql_query_key % key.lemma
                 sql_query += key_subs
 
-        return sql_query
+        return sql_query, all_keys
 
-    def prep_query_data(self, keywords, query):
+    def prep_query_data(self, query, keywords):
         all_keys = []
         docs = []
         doc = {'id': None, 'title': None, 'type': None, 'score': None, 'keywords': [], 'keywords_scores': []}
@@ -223,7 +266,7 @@ class Dialog(Dokubot):
             docs.append(doc)
             doc = {'id': None, 'title': None, 'type': None, 'score': None, 'keywords': [], 'keywords_scores': []}
 
-        return pd.DataFrame(docs), count, Counter(all_keys)
+        return pd.DataFrame(docs), count, Counter(all_keys)[:5]
 
 
     def service(self, logic, essence, op_type):  # UNI_D, NO_D, SCL_D, CL_D

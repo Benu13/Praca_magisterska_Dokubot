@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Chatbot</title>
+  <title>MiauoAI</title>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
@@ -14,7 +14,7 @@
   <section class="msger">
     <header class="msger-header">
       <div class="msger-header-title">
-        <i class="fas fa-bug"></i> Chatbot <i class="fas fa-bug"></i>
+        <i class="meger-header-title-text"></i>🗿 Aby zresetować konwersację wpisz "restart" 🗿 <i class="meger-header-title-text"></i>
       </div>
     </header>
     <main class="msger-chat">
@@ -22,11 +22,10 @@
         <div class="msg-img" style="background-image: url(https://image.flaticon.com/icons/svg/327/327779.svg)"></div>
         <div class="msg-bubble">
           <div class="msg-info">
-            <div class="msg-info-name">Chatbot</div>
-            <div class="msg-info-time">12:45</div>
+            <div class="msg-info-name">MiauoAI</div>
           </div>
           <div class="msg-text">
-            Hi, welcome to ChatBot! Go ahead and send me a message. 😄
+            Cześć, jakiego dokumentu szukasz?
           </div>
         </div>
       </div>
@@ -45,8 +44,8 @@
     // Icons made by Freepik from www.flaticon.com
     const BOT_IMG = "https://image.flaticon.com/icons/svg/327/327779.svg";
     const PERSON_IMG = "https://image.flaticon.com/icons/svg/145/145867.svg";
-    const BOT_NAME = "    ChatBot";
-    const PERSON_NAME = "You";
+    const BOT_NAME = "MiauoAI";
+    const PERSON_NAME = "Ty";
     msgerForm.addEventListener("submit", event => {
       event.preventDefault();
       const msgText = msgerInput.value;
@@ -77,9 +76,12 @@
       $.get("/get", { msg: rawText }).done(function (data) {
         console.log(rawText);
         console.log(data);
-        const msgText = data;
-        appendMessage(BOT_NAME, BOT_IMG, "left", msgText);
-      });
+        if(typeof data === 'string') {
+           appendMessage(BOT_NAME, BOT_IMG, "left", data);
+        } else{
+        for (const tex of data){
+          appendMessage(BOT_NAME, BOT_IMG, "left", tex);}
+      }});
     }
     // Utils
     function get(selector, root = document) {

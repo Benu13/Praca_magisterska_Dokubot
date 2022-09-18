@@ -507,30 +507,3 @@ def create_lookup(words, nlp):
                        'vector': token[0].vector.tolist()})
 
     return lookup
-
-if __name__ == '__main__':
-
-    config = {
-        'OOV_handler_type': 'mimic',
-        'correct_misspell': True,
-        'spacy_size': 'md',
-        'misspell_cor_algorithm': 'lev',
-        'spacy_from_path': True,
-        'spacy_disable': ["attribute_ruler", "ner", 'tagger', 'parser', 'morphologizer'],
-        'paths': {
-            'slot_filler_path': 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/models/slot_filer/slot_mimic/slot_mimic_medium.h5',
-            'slot_lookup_path' : 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/data/functionalities/lookups/lookup_slot.json',
-            'choice_lookup_path': 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/data/functionalities/lookups/lookup_choice.json',
-            'spacy_path': 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/models/Spacy_md/',
-            'mimic_path': 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/models/mimic/mimic_smol/mimic_smol.h5',
-            'char2tok_path': 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/models/mimic/mimic_smol/char_tokenizer_mimic_smol.json',
-            'misspell_lookup_path' : 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/data/functionalities/lookups/lookup_docs.json'
-        }
-
-    }
-
-    Dokubot = Dokubot(config)
-    test_test = Dokubot.extract("poleć mi dokument a także lub książke")
-
-
-    print('a')

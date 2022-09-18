@@ -160,6 +160,7 @@ class LogicHandler:
                 if logic[len(logic)-i-1].logic == 'UNI':
                     self.UNI_flag = True
                     self.UNI_tokens.append(len(logic)-i-1)
+                    return logic
                 if logic[i].logic == 'NEU':
                     logic[i].logic = last_op
                     logic[i].logic_pl = self.get_logic_pl(last_op)
@@ -271,76 +272,3 @@ class LogicHandler:
             logic_pl = 'nieznany'
 
         return logic_pl
-
-if __name__ == '__main__':
-
-    config = {
-        'OOV_handler_type': 'mimic',
-        'correct_misspell': True,
-        'spacy_size': 'md',
-        'misspell_cor_algorithm': 'lev',
-        'spacy_from_path': True,
-        'spacy_disable': ["attribute_ruler", "ner", 'tagger', 'parser', 'morphologizer'],
-        'paths': {
-            'slot_filler_path': 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/models/slot_filer/slot_mimic/slot_mimic_medium.h5',
-            'slot_lookup_path': 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/data/functionalities/lookups/lookup_slot.json',
-            'choice_lookup_path': 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/data/functionalities/lookups/lookup_choice.json',
-            'spacy_path': 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/models/Spacy_md/',
-            'mimic_path': 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/models/mimic/mimic_smol/mimic_smol.h5',
-            'char2tok_path': 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/models/mimic/mimic_smol/char_tokenizer_mimic_smol.json',
-            'misspell_lookup_path': 'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/data/functionalities/lookups/lookup_docs.json'
-        }
-
-    }
-
-    Dokubot = Dokubot(config)
-    test_test = Dokubot.extract("poleć mi książkę o jeleniach lub i kotach")
-
-    keys = test_test.essence[0]['doc_types']
-    logic = test_test.essence[0]['doc_operators']
-
-    a = LogicHandler()
-    op = a.solve(keys, logic)
-    #kp = a.solve_keys()
-
-    print('a')
-
-'''
-    def solve_doc(self, docs, docs_operators):
-        self.UNI_flag = False
-        self.UNI_tokens = []
-        doc_all = False
-        doc_pref = []
-        doc_pref_logic = []
-        
-        if not docs_operators:
-            return  ("CL_D", doc_all, doc_pref)
-
-        if not docs:
-            return  ("NO_D") #No docs flag
-
-        #solve doc logic
-        ambigious, doc_pref_logic = self.check_logic_ambiguity(docs_operators)
-        if ambigious:
-            if self.UNI_flag:
-                return ("UNI_D", doc_all, self.UNI_tokens) # raise UNIDENTIFIED DOC (UNI_D) logic token flag
-            else:
-                # try to unravel logic operators
-                combinations = self.get_combinations(len(doc_pref))
-                trees = self.get_trees(combinations, doc_pref_logic, doc_pref)
-                reduced_comb = self.reduce_similar_trees(trees)
-                return ("SCL_D", doc_all, reduced_comb) # raise select correct logic flag
-        
-        # solve if all in doc_types
-        for i in range(len(docs)):
-            if docs[i].origin in ['coś', 'czegoś', 'dokument', 'papier']:
-                if not doc_all:
-                    doc_all = True
-                else:
-                    pass
-            else:
-                doc_pref.append(docs[i])
-                if i > 0:
-                    doc_pref_logic.append(docs_operators[i-1])
-        
-        return ("CL_D", doc_all, self.connect_logic(doc_pref, doc_pref_logic))  # raise all doc clear flag'''
