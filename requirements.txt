@@ -79,13 +79,7 @@ spacy-legacy==3.0.9
 spacy-loggers==1.0.1
 SQLAlchemy==1.4.39
 srsly==2.4.3
-tensorboard==2.10.0
-tensorboard-data-server==0.6.1
-tensorboard-plugin-wit==1.8.1
 tensorflow-cpu==2.10.0
-tensorflow-estimator==2.10.0
-tensorflow_intel==2.10.0
-tensorflow-io-gcs-filesystem==0.27.0
 termcolor==2.0.1
 thinc==8.0.15
 tqdm==4.64.0
