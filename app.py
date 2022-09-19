@@ -20,7 +20,7 @@ config = {
         'spacy_from_path': True,
         'spacy_disable': ["attribute_ruler", "ner", 'tagger', 'parser', 'morphologizer'],
         'paths': {
-            'slot_filler_path': 'models/slot_filer/slot_mimic/slot_mimic_medium.h5',
+            'slot_filler_path': 'models/slot_filer/slot_mimic/slot_mimic_small.h5',
             'slot_lookup_path': 'data/functionalities/lookups/lookup_slot.json',
             'choice_lookup_path': 'data/functionalities/lookups/lookup_choice.json',
             'spacy_path': 'models/Spacy_md/',
