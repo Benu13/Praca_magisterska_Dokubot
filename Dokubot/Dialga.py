@@ -26,11 +26,10 @@
 from Dokubot.LoadModels import Dokubot, LogicToken, KeyToken
 from Dokubot.LogicHandler import LogicHandler
 import random
-from nltk import ngrams
 from collections import Counter
 import pandas as pd
 import re
-from string import digits
+
 
 def text_cleaner(text: str) -> str:
     # Remove: punctuations, URLs, numbers, unnecesary or unknown symbols
