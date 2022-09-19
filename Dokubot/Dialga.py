@@ -58,8 +58,8 @@ def text_cleaner(text: str) -> str:
     text = text.lower() # lowercase text
     text = ' '.join(text.split()) # remove unnecessary whitespaces
 
-
     return text
+
 greetings = ["Cześć, jakiego dokumentu szukasz?", "Hejka, jakiego dokumentu dzisiaj poszukujesz?", "Jaki dokument wariacie?",
              "Elo byq, jaki dokumencik zapodać?", "Miło cię widzieć, jakiego dokumentu szukasz?"]
 retry_responses = ["Spróbujmy jeszcze raz...", "It's rewind time!", "Od nowa!", "Jeszcze jeden raz!",

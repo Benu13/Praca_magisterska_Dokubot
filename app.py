@@ -1,14 +1,13 @@
 from flask import Flask, render_template, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
-from flask_socketio import SocketIO
 import Dokubot.Dialga as DD
 import random
 import pandas as pd
 from collections import Counter
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://lukasz:12345@localhost/Dokubot'
-app.config['SECRET_KEY'] = 'lukasz1055'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://txqbllhz:iUCeaEJXQIV9DiFks2gjbTxClw5ssOpx@mouse.db.elephantsql.com/txqbllhz'
+app.config['SECRET_KEY'] = 'SZA2211SCK73XD'
 db = SQLAlchemy(app)
 app.static_folder = 'static'
 
@@ -580,4 +579,4 @@ def filter_not_in_data(df, key):
     return df2
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
