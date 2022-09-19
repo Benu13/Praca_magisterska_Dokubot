@@ -1,8 +1,6 @@
 from flask import Flask, render_template, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 import Dokubot.Dialga as DD
-import random
-import pandas as pd
 from collections import Counter
 
 app = Flask(__name__)

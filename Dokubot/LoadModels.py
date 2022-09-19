@@ -1,13 +1,12 @@
-import tensorflow as tf
+from keras.models import load_model
+from keras.preprocessing.text import tokenizer_from_json
 import json
-import spacy
-from typing import Union
+from spacy import load as spacy_load
 import numpy as np
-import keras.backend as K
 from numpy import dot
 from numpy.linalg import norm
 from functools import lru_cache
-
+from keras.backend import sqrt as Ksqrt, sum as Ksum, square as Ksquare
 
 def pad_array(word, length):
     word_padded = np.zeros([1, length]).astype(np.int32)
@@ -338,15 +337,15 @@ class Mimic(object):
 
     @classmethod
     def load(cls, mimic_path, tokenizer_path):
-        mimic_model = tf.keras.models.load_model(mimic_path,
+        mimic_model = load_model(mimic_path,
                                                  custom_objects = {'euclidean_distance': cls.euclidean_distance})
         with open(tokenizer_path, encoding='utf-8-sig') as f:
             data = json.load(f)
-        char_tokenizer = tf.keras.preprocessing.text.tokenizer_from_json(data)
+        char_tokenizer = tokenizer_from_json(data)
         return cls(mimic_model, char_tokenizer)
 
     def euclidean_distance(cls, y_true, y_pred):
-        return K.sqrt(K.sum(K.square(y_true - y_pred), axis=-1, keepdims=True))
+        return Ksqrt(Ksum(Ksquare(y_true - y_pred), axis=-1, keepdims=True))
 
     def __init__(self, mimic_model, char_tokenizer):
         self._mimic_model = mimic_model
@@ -404,7 +403,7 @@ class SlotFiller(object):
 
     @classmethod
     def load(cls, slot_model_path, slot_lookup_path):
-        slot_filler = tf.keras.models.load_model(slot_model_path)
+        slot_filler = load_model(slot_model_path)
         if slot_lookup_path:
             with open(slot_lookup_path, 'r',encoding='utf-8-sig') as f:
                 lookup = json.load(f)
@@ -466,14 +465,14 @@ class Dokubot():
 
         self.max_sentence_length = 30
         if config['spacy_from_path']:
-            self.nlp = spacy.load(config['paths']['spacy_path'], exclude=config['spacy_disable'])
+            self.nlp = spacy_load(config['paths']['spacy_path'], exclude=config['spacy_disable'])
         else:
             if self.spacy_size == 'lg':
-                self.nlp = spacy.load('pl_core_news_lg', disable=config.disable)
+                self.nlp = spacy_load('pl_core_news_lg', disable=config.disable)
             elif self.spacy_size == 'md':
-                self.nlp = spacy.load('pl_core_news_md', disable=config.disable)
+                self.nlp = spacy_load('pl_core_news_md', disable=config.disable)
             elif self.spacy_size == 'sm':
-                self.nlp = spacy.load('pl_core_news_md', disable=config.disable)
+                self.nlp = spacy_load('pl_core_news_md', disable=config.disable)
 
         self.OOV_handler_type = config['OOV_handler_type']
         if self.OOV_handler_type == 'mimic':

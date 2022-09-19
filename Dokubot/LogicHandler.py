@@ -1,8 +1,3 @@
-# Logic
-
-from Dokubot.LoadModels import Dokubot
-
-
 class Tree:
     def __init__(self, logic, leafs):
         #logic - Logic token from essence
