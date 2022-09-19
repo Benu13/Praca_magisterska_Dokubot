@@ -11,3 +11,4 @@ python-socketio==5.7.1
 simple-websocket==0.7.0
 simple-websocket==0.7.0
 psycopg2==2.8.6
+gunicorn==20.1.0
