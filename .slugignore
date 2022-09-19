@@ -12,7 +12,8 @@ preprocess_data.py
 article_scraper.py
 create_database.py
 data_acquisition.py
-
+Question_generator
+create_database.py
 models/Spacy_lg
 models/mimic/mimic_large
 models/mimic/mimic_medium
@@ -24,4 +25,5 @@ models/CountVectorizer
 preprocess
 data_logs
 tests
+
 
