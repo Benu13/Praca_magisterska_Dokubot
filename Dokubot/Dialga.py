@@ -135,6 +135,18 @@ class Dialog(Dokubot):
         self.key_query = None
         self.key_logic_all = []
 
+    def soft_reset(self):
+        self.doc_form = None
+        self.doc_established = False
+        self.doc_query = None
+        self.doc_all_flag = False
+        self.doc_pref = []
+        self.doc_logic = ['None']
+        self.key_logic = ['None']
+        self.key_established = False
+        self.key_query = None
+
+
     def start_conversation(self):
         print(random.choice(greetings))
         while not self.end_session:

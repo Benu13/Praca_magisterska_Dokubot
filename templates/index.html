@@ -7,19 +7,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 </head>
 <body>
   <!-- partial:index.partial.html -->
   <section class="msger">
     <header class="msger-header">
       <div class="msger-header-title">
-        <i class="meger-header-title-text"></i>🗿 Aby zresetować konwersację wpisz "restart" 🗿 <i class="meger-header-title-text"></i>
+        <i class="meger-header-title-text"></i>🗿 Aby zresetować konwersację wpisz "restart" 🗿<i class="meger-header-title-text"></i>
       </div>
     </header>
     <main class="msger-chat">
       <div class="msg left-msg">
-        <div class="msg-img" style="background-image: url(https://image.flaticon.com/icons/svg/327/327779.svg)"></div>
         <div class="msg-bubble">
           <div class="msg-info">
             <div class="msg-info-name">MiauoAI</div>
@@ -31,34 +30,32 @@
       </div>
     </main>
     <form class="msger-inputarea">
-      <input type="text" class="msger-input" id="textInput" placeholder="Enter your message...">
-      <button type="submit" class="msger-send-btn">Send</button>
+      <input type="text" class="msger-input" id="textInput" placeholder=" ">
+      <button type="submit" class="msger-send-btn">Wyślij</button>
     </form>
   </section>
   <!-- partial -->
-  <script src='https://use.fontawesome.com/releases/v5.0.13/js/all.js'></script>
+  <script src='https://use.fontawesome.com/releases/v5.15.4/js/all.js'></script>
   <script>
     const msgerForm = get(".msger-inputarea");
     const msgerInput = get(".msger-input");
     const msgerChat = get(".msger-chat");
-    // Icons made by Freepik from www.flaticon.com
-    const BOT_IMG = "https://image.flaticon.com/icons/svg/327/327779.svg";
-    const PERSON_IMG = "https://image.flaticon.com/icons/svg/145/145867.svg";
+
     const BOT_NAME = "MiauoAI";
     const PERSON_NAME = "Ja";
     msgerForm.addEventListener("submit", event => {
       event.preventDefault();
       const msgText = msgerInput.value;
       if (!msgText) return;
-      appendMessage(PERSON_NAME, PERSON_IMG, "right", msgText);
+      appendMessage(PERSON_NAME, "right", msgText);
       msgerInput.value = "";
       botResponse(msgText);
     });
-    function appendMessage(name, img, side, text) {
+
+    function appendMessage(name, side, text) {
       //   Simple solution for small apps
       const msgHTML = `
 <div class="msg ${side}-msg">
-  <div class="msg-img" style="background-image: url(${img})"></div>
   <div class="msg-bubble">
     <div class="msg-info">
       <div class="msg-info-name">${name}</div>
@@ -77,10 +74,10 @@
         console.log(rawText);
         console.log(data);
         if(typeof data === 'string') {
-           appendMessage(BOT_NAME, BOT_IMG, "left", data);
+           appendMessage(BOT_NAME, "left", data);
         } else{
         for (const tex of data){
-          appendMessage(BOT_NAME, BOT_IMG, "left", tex);}
+          appendMessage(BOT_NAME, "left", tex);}
       }});
     }
     // Utils

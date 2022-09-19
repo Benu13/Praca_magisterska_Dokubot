@@ -44,6 +44,7 @@ found_data = None
 found_updated = None
 frequent = None
 all_keys = None
+doc_ids = []
 
 class Document(db.Model):
     __tablename__ = 'Document'
@@ -71,7 +72,7 @@ def index():
 @app.route("/get")
 def get_bot_response():
     global current_essence, essence_num, UNI_questions, pref_doc_asked, uni_type, stage, stop_flag, found_data, \
-        found_updated, frequent, all_keys
+        found_updated, frequent, all_keys, doc_ids
 
     userText = request.args.get('msg')
     if userText == 'restart':
@@ -87,6 +88,7 @@ def get_bot_response():
         found_updated = None
         frequent = None
         all_keys = None
+        doc_ids = []
 
         return jsonify([random.choice(DD.retry_responses), random.choice(DD.greet_reactions),
                         random.choice(DD.ask_for_doc)])
@@ -211,7 +213,7 @@ def get_bot_response():
                 question += "podesłać wszystkie czy tylko najlepszy?"
                 return question
 
-            elif count > 5 and frequent[0][1] > 1:
+            elif count >= 5 and frequent[0][1] > 1:
                 stage = 'search_results'
                 question += 'co teraz robimy?'
                 qq =[question, "1. Pokaż kilka najlepszych", "2. Dodaj tag", "3. Pomóż mi zawęzić wyszukiwanie",
@@ -311,14 +313,17 @@ def get_bot_response():
                 found_updated = None
                 frequent = None
                 all_keys = None
-                Dialog.doc_logic = ['None']
-                Dialog.key_logic = ['None']
+                doc_ids = []
+                Dialog.soft_reset()
+
             elif userText.lower() == 'szukanie':
                 found_data = None
                 found_updated = None
                 frequent = None
                 all_keys = None
+                doc_ids = []
                 stage = 'search_narrowing'
+
             elif ut[0] == 'info':
                 if len(ut) == 1:
                     rr = db.session.query(Document).get(int(found_updated.id.iloc[0]))
@@ -326,16 +331,16 @@ def get_bot_response():
                     for tag in rr.keywords:
                         tags.append(tag.key)
                     return jsonify(['Tytuł: ' + rr.title, "Autorzy: "+ rr.authors, 'Typ dokumentu:'+rr.doc_type,
-                                    'Tagi: ' + ' '.join(tags), "URL: " + rr.url])
+                                    'Tagi: ' + ', '.join(tags), "URL: " + rr.url])
                 try:
-                    if int(ut[1]) in range(1, len(found_updated)+1):
-                        rr = db.session.query(Document).get(int(found_updated.id.iloc[int(ut[1])-1]))
+                    if int(ut[1]) in range(1, len(doc_ids)+1):
+                        rr = db.session.query(Document).get(int(doc_ids[int(ut[1])-1]))
                         tags = []
                         for tag in rr.keywords:
                             tags.append(tag.key)
 
                         return jsonify(['Tytuł: ' + rr.title, "Autorzy: " + rr.authors, 'Typ dokumentu: ' + rr.doc_type,
-                                        'Tagi: ' + ' '.join(tags), "URL: " + rr.url])
+                                        'Tagi: ' + ', '.join(tags), "URL: " + rr.url])
                     else:
                         return "Zły numerek!"
                 except:
@@ -344,9 +349,32 @@ def get_bot_response():
                 return "Wybacz, nie rozumiem ╥﹏╥"
 
         if stage == 'list_results':
+            stage = "after_list"
+
             if userText.lower() in DD.select_best:
-                stage = "after_list"
-                out = ["To wszystko, jeśli potrzebujesz dodatkowych informacji o tej pozycji wpisz 'info'.",
+                answer = []
+                doc_num = 1
+                if Dialog.doc_pref and Dialog.doc_all_flag:
+                    for preffered in Dialog.doc_pref:
+                        best = found_updated[found_updated.type == 'preffered']
+                        if len(best)>0:
+                            s = "Najlepszy dokument typu: %s" %preffered
+                            answer.extend([s, str(doc_num) + ". " + best.title.iloc[0] + "; Wskaźnik: " + str(best.score.iloc[0])])
+                            doc_num += 1
+                            doc_ids.append(best.id.iloc[0])
+                        else:
+                            s = "Nie udało się znaleźć preferowanego typu dokumentu: %s w znalezionych pozycjach." %preffered
+                            answer.append(s)
+
+                    if found_updated.type.iloc[0] not in Dialog.doc_pref:
+                        s = "Najlepszy dokument z poza preferowanych typów: "
+                        answer.extend([s, str(doc_num) + ". " + found_updated.title.iloc[0] + "; Wskaźnik: " + str(found_updated.score.iloc[0])])
+                        doc_ids.append(found_updated.id.iloc[0])
+                else:
+                    tt = "Najlepsza znaleziona pozycja jest dokumentem typu: %s" %found_updated.type.iloc[0]
+                    answer = [tt, found_updated.title.iloc[0] + "; Wskaźnik: " + str(found_updated.score.iloc[0])]
+
+                out = ["To wszystko, jeśli potrzebujesz dodatkowych informacji o tej pozycji wpisz 'info {numer_pozycji}'.",
                  "Jeśli chcesz rozpocząć od momentu pierwszego wyszukiwania wpisz 'szukanie'.",
                  "I jeszcze jedno - jeśli chcesz zacząć od nowa wpisz 'restart'",
                  "To wszystko z mojej strony (´^ω^)ノ."]
@@ -354,13 +382,15 @@ def get_bot_response():
                 out2 = ["Z tej części to tyle!", "Jeśli potrzebujesz dodatkowych informacji o tej pozycji wpisz 'info'.",
                         "Jeśli chcesz rozpocząć od momentu pierwszego wyszukiwania wpisz 'szukanie'.",
                         "A jeśli chcesz przejść od razu dalej to wpisz 'dalej'."]
+
                 if current_essence < essence_num:
-                    return jsonify(["1. " + found_updated.title.iloc[0] + "; Wskaźnik: " + str(found_updated.score.iloc[0])]+ out2)
+                    return jsonify(answer + out2)
                 else:
-                    return jsonify(["1. " + found_updated.title.iloc[0] + "; Wskaźnik: " + str(found_updated.score.iloc[0])]+ out)
+                    return jsonify(answer + out)
 
             elif userText.lower() in DD.select_all:
                 docs_found = []
+                doc_num = 1
                 out = ["To wszystko, jeśli potrzebujesz dodatkowych informacji o danej pozycji wpisz 'info {numer_pozycji}'.",
                        "Jeśli chcesz rozpocząć od momentu pierwszego wyszukiwania wpisz 'szukanie'.",
                        "I jeszcze jedno - jeśli chcesz zacząć od nowa wpisz 'restart'",
@@ -371,7 +401,9 @@ def get_bot_response():
 
                 for i in range(min(len(found_updated),10)):
                     stage = "after_list"
-                    docs_found.append(str(i+1)+ ". " + found_updated.title.iloc[i] + "; Wskaźnik: " + str(found_updated.score.iloc[i]))
+                    docs_found.append(str(i+1)+ ". " + found_updated.title.iloc[i] +"; Typ: " +
+                                      found_updated.type.iloc[i] + "; Wskaźnik: " + str(found_updated.score.iloc[i]))
+                    doc_ids.append(found_updated.id.iloc[i])
 
                 if current_essence < essence_num:
                     return jsonify(docs_found + out2)
