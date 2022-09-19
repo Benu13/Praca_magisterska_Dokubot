@@ -160,8 +160,6 @@ def get_bot_response():
 
         # get data from db and start narrowing
         if stage == 'search_narrowing':
-            aa = Dialog
-            f = found_data
             if found_data is None:
                 query, all_keys = Dialog.keys_to_query()
                 query = db.text(query)
@@ -170,12 +168,27 @@ def get_bot_response():
                 found_data, count, frequent = Dialog.prep_query_data(req, all_keys)
                 f= frequent
                 found_updated = found_data.sort_values('score', ascending=False)
+                if not Dialog.doc_all_flag:
+                    if Dialog.doc_pref:
+                        found_updated = found_data.loc[found_data['type'].isin(Dialog.doc_pref)]
+                        count = len(found_updated)
+                        if count < 1:
+                            stage = 'search_pref_failed'
+                            return jsonify(["Nie udało się znaleźć typu/ów: " + ', '.join([i for i in Dialog.doc_pref]) + " w zadanym temacie.",
+                                    "Czy chcesz przeszukać wszystkie typy dokumentów? (tak/nie)"])
+                        else:
+                            found_updated = found_updated.sort_values('score', ascending=False).reset_index(drop=True)
+                            frequent = Counter(get_keys_from_pd(found_updated, all_keys)).most_common()
+                    else:
+                        return "Coś poszło nie tak, wpisz 'restart' żeby zacząć od nowa :/"
 
                 question = "Udało mi się znaleźć %i pasujących wyników, " % count
+
             else:
                 found_updated = found_updated.sort_values('score', ascending=False)
                 found_updated = found_updated.reset_index(drop=True)
                 count = len(found_updated)
+
                 question = "No to mamy %i pasujących wyników, " % count
 
             if count == 1:
@@ -212,6 +225,17 @@ def get_bot_response():
                       "tutaj musisz wybrać numerek jak coś (˵ ͡~ ͜ʖ ͡°˵)ﾉ⌒♡*:･。."]
                 return jsonify(qq)
 
+        if stage == 'search_pref_failed':
+            if userText.lower() == 'tak':
+                Dialog.doc_all_flag = True
+                found_updated = found_data
+                stage = 'search_narrowing'
+            elif userText.lower() == 'nie':
+                stage = 'start'
+                return 'Zawsze możesz spróbować ponownie ;_;'
+            else:
+                return 'Nie rozumiem, po prostu wpisz tak lub nie ( ง `ω´ )۶'
+
         if stage == 'search_results':
             try:
                 if int(userText) == 1:
@@ -229,9 +253,8 @@ def get_bot_response():
 
         if stage == 'add_tag':
             df_added_tag = filter_in_data(found_updated, userText.lower())
-            if df_added_tag is None:
+            if df_added_tag is not None:
                 found_updated = df_added_tag
-                found_updated = found_updated.reset_index()
                 all_keys.append(userText.lower())
                 frequent = Counter(get_keys_from_pd(found_updated, all_keys)).most_common()
                 stage = 'search_narrowing'

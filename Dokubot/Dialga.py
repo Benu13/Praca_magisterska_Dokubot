@@ -88,7 +88,7 @@ greet = ['cześć', 'siemka', 'elo elo', 'witam', 'no witam', 'gitara siema', 'c
          'czółko', 'strzałka', 'elo byku', 'elo byq',' dzień dobry', 'dobry', 'witam witam', 'dobry wieczór']
 
 select_all = ['wszystkie', 'pokaż wszystkie', 'podeślij wszystkie', 'daj wszystkie', 'mogą być wszystkie', 'pokaż całość',
-              'całość', 'każdy', 'pokaż co masz']
+              'całość', 'każdy', 'pokaż co masz', 'daj wszystko', 'podeślij wszystko', 'pokaż wszystko']
 select_best = ['daj nalepszy', 'podeślij najlepszy', 'najbardziej pasujący', 'najlepszy', 'tylko najlepszy', 'pokaż mi tylko najlepszy',
                'daj mi tylko najlepszy', 'podeślij mi najbardziej pasujący', 'podeślij mi najlepszy', 'daj mi najlepszy',
                'daj mi najbardziej pasujący']
@@ -182,7 +182,7 @@ class Dialog(Dokubot):
                     else:
                         pass
                 else:
-                    self.doc_pref.append(docs[i])
+                    self.doc_pref.append(docs[i].origin)
 
     def isnegation(self, text):
         if text.lower() in negation or len(text.split(' ')) < 2:
