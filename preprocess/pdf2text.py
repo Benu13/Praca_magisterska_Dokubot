@@ -98,7 +98,6 @@ def text_cleaner(text: str) -> str:
     # Output:
     # Cleaned text
 
-    # TODO - test it on different documents and rewrite it better, test time
 
     text = text.replace(u'-\n', u'') # connect words split by new line
     text = re.sub(r"\S*https?:\S*", "", text) # remove links

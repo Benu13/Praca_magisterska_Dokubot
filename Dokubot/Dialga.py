@@ -23,7 +23,7 @@
 
 -> output positions with maximum value from database matching keywords
 '''
-from Dokubot.LoadModels import Dokubot, LogicToken, KeyToken
+from Dokubot.LoadModels import Dokubot, LogicToken, KeyToken, check_similarity, wToken, DocToken
 from Dokubot.LogicHandler import LogicHandler
 import random
 from collections import Counter
@@ -146,44 +146,6 @@ class Dialog(Dokubot):
         self.key_query = None
 
 
-    def start_conversation(self):
-        print(random.choice(greetings))
-        while not self.end_session:
-            # get utterance
-            utterance = input(">> ")
-            #greet
-            while self.isgreet(text_cleaner(utterance)):
-                print(random.choice(greet_reactions))
-                print(random.choice(ask_for_doc))
-                utterance = input(">> ")
-
-            sentence = Dialog.extract(text_cleaner(utterance))
-            for i in range(len(sentence.essence)):
-                essence = sentence.essence[i]
-
-                while self.doc_logic[0] != 'CL':
-                    self.doc_logic = self.LH.solve(essence['doc_types'], essence['doc_operators'])
-                    self.doc_logic, essence = self.service(self.doc_logic, essence, 'docs')
-                self.doc_query = self.doc_logic
-                self.doc_all_pref(essence['doc_types'])
-
-                while self.key_logic[0] != 'CL':
-                    self.key_logic = self.LH.solve(essence['keywords'], essence['key_operators'])
-                    self.key_logic, essence = self.service(self.key_logic, essence, 'keys')
-                self.key_query = self.key_logic
-
-                if self.key_established:
-                    sql_key_query = self.keys_to_query()
-                    # request data from query
-
-                    print(sql_key_query)
-                else:
-                    if self.doc_established:
-                        print(random.choice(no_tags))
-                    else:
-                        print("Coś poszło nie tak, musisz odświerzyć stronę")
-                        self.end_session = True
-
     def doc_all_pref(self, docs):
         if docs:
             for i in range(len(docs)):
@@ -196,7 +158,7 @@ class Dialog(Dokubot):
                     self.doc_pref.append(docs[i].origin)
 
     def isnegation(self, text):
-        if text.lower() in negation or len(text.split(' ')) < 2:
+        if text.lower() in negation:
             return True
         else:
             return False
@@ -211,27 +173,61 @@ class Dialog(Dokubot):
         return utterance.lower()
 
     def long_key_recombobulator(self, key:KeyToken):
-        full_s = ["(", "("]
-        key_len = len(key.tokens)
+        przyim = ["na", "o", "w", "z","za","ku", "do", "bez", "pod", "przed", "nad", "dla", "między", "przez", "po"]
+        j=0
+        keys = []
+        key_w = []
+        for i in key.lemma.split():
+            if i in przyim and key_w:
+                keys.append(key_w)
+                key_w = []
+            elif i in przyim:
+                j += 1
+                continue
+            else:
+                key_w.append(key.tokens[j])
+            j += 1
+        if key_w:
+            keys.append(key_w)
+
+        #key_len = len(key.tokens)
         #ng = ngrams(key.lemma.split(), 2)
         #a = list(ng)
-        if key_len > 1:
-            for i in range(len(key.tokens)-1):
-                full_s.append(KeyToken([key.tokens[i]]))
-                full_s.append(LogicToken.artifical(logic="OR"))
-            full_s.append(KeyToken([key.tokens[-1]]))
-        full_s.append(")")
-        if key_len > 2:
-            full_s.append(LogicToken.artifical(logic="OR"))
-            full_s.append("(")
-            for i in range(len(key.tokens)-2):
-                full_s.append(KeyToken([key.tokens[i],key.tokens[i+1]]))
-                full_s.append(LogicToken.artifical(logic="OR"))
-            full_s.append(KeyToken([key.tokens[-2], key.tokens[-1]]))
-            full_s.append(")")
+        #if key_len > 1:
+        #    full_s.append("(")
+       #     for i in range(len(key.tokens)-1):
+        #        full_s.append(KeyToken([key.tokens[i]]))
+       #         full_s.append(LogicToken.artifical(logic="OR"))
+        #    full_s.append(KeyToken([key.tokens[-1]]))
+        #full_s.append(")")
+        fs = []
+        for key in keys:
+            key_len = len(key)
+            if key_len > 2:
+                full_s = ["("]
+                #full_s.append(LogicToken.artifical(logic="OR"))
+                full_s.append("(")
+                for i in range(len(key)-2):
+                    full_s.append(KeyToken([key[i],key[i+1]]))
+                    full_s.append(LogicToken.artifical(logic="OR"))
+                full_s.append(KeyToken([key[-2], key[-1]]))
+                full_s.append(")")
+                full_s.extend([LogicToken.artifical(logic="OR"), KeyToken(key), ")"])
+                fs.append(full_s)
+            else:
+                fs.append(KeyToken(key))
 
-        full_s.extend([LogicToken.artifical(logic="OR"), key, ")"])
-        return full_s
+        if len(fs) > 1:
+            out = ["("]
+            for i in range(len(fs)-1):
+                out.append(fs[i])
+                out.append(LogicToken.artifical(logic="OR"))
+            out.append(fs[-1])
+            out.append(")")
+        else:
+            out = fs[0]
+
+        return out
 
     def filter_in_data(self, df, key):
         mask = df.keywords.apply(lambda x: key in x)
@@ -245,6 +241,19 @@ class Dialog(Dokubot):
         df2 = df[mask]
         return df2
 
+    def check_simil(self, word):
+        tt =wToken(word)
+        corrected_form, corr_word_cs = check_similarity(tt, self.misspells_lookup, type='lev')
+        if corr_word_cs < 3:
+            tt.corrected_word = corrected_form['word']
+            tt.form = corrected_form['form']
+            tt.origin = corrected_form['original']
+            tt.word = corrected_form['original']
+            tt.lemma = corrected_form['original']
+            return DocToken([tt])
+        else:
+            return None
+
     def keys_to_query(self):
         sql_query = """SELECT "Document".* FROM "Document"  WHERE """
         sql_query_key = """(EXISTS (SELECT 1 FROM "Keyword" WHERE "Document".id = "Keyword".document_id AND "Keyword"."key" = '%s'))"""
@@ -252,7 +261,7 @@ class Dialog(Dokubot):
         prepr_q = []
         for keyw in self.key_logic[1]:
             if isinstance(keyw, KeyToken):
-                if len(keyw.tokens) > 1:
+                if len(keyw.tokens) > 2:
                     prepr_q.extend(self.long_key_recombobulator(keyw))
                 else:
                     prepr_q.append(keyw)

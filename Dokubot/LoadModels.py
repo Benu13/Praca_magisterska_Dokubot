@@ -75,7 +75,7 @@ def check_similarity(token, lookup, type ='cs'):
 
 
 class wToken():
-    def __init__(self, word, is_oov, lemma, vector):
+    def __init__(self, word, is_oov=True, lemma = None, vector= None):
         self.word = word
         self.chars = list(word)
         self.chars_tokens = None
@@ -368,13 +368,17 @@ class Mimic(object):
         return vector
 
 
-class VecMean:
-    def __int__(self, embedding_dimention):
+class OnesOOV(object):
+    @classmethod
+    def load(cls, embedding_dimention):
+        return cls(embedding_dimention)
+
+    def __init__(self, embedding_dimention):
         self.name = 'Mean OOV vector initializer'
         self.embedding_dimention = embedding_dimention
 
     def __call__(self, doc):
-        word_vectors = np.zeros([1, self.embedding_dimention])
+        word_vectors = np.ones([1, self.embedding_dimention])
         i = 1
         for token in doc:
             if not token.is_oov:
@@ -386,13 +390,16 @@ class VecMean:
         return doc
 
 
-class VecRand:
-    def __int__(self, embedding_dimention):
+class VecRand(object):
+    @classmethod
+    def load(cls, embedding_dimention):
+        return cls(embedding_dimention)
+
+    def __init__(self, embedding_dimention):
         self.name = 'Rand OOV vector initializer'
         self.embedding_dimention = embedding_dimention
 
     def __call__(self, doc):
-        i = 1
         for token in doc:
             if token.is_oov:
                 token.vector = np.random.rand(1,self.embedding_dimention).astype(np.float32)
@@ -477,10 +484,10 @@ class Dokubot():
         self.OOV_handler_type = config['OOV_handler_type']
         if self.OOV_handler_type == 'mimic':
             self.OOV_handler = Mimic.load(config['paths']['mimic_path'], config['paths']['char2tok_path'])
-        elif self.OOV_handler_type == 'mean':
-            self.OOV_handler = VecMean()
+        elif self.OOV_handler_type == 'OOV_vec':
+            self.OOV_handler = OnesOOV.load(300)
         elif self.OOV_handler_type == 'random':
-            self.OOV_handler = VecRand()
+            self.OOV_handler = VecRand.load(300)
         elif self.OOV_handler_type == 'None':
             self.OOV_handler = None
         else:
