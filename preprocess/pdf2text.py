@@ -7,6 +7,7 @@ import spacy
 from typing import Union
 from unidecode import unidecode
 
+
 def get_rect(page_size, margin_list):
     # margin _list = left_margin, right_margin, top_margin, bottom_margin
     a4_size = [210, 297]

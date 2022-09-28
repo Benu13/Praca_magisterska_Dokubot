@@ -5,3 +5,4 @@ data/raw_text
 data/processed_text
 data/tables/ngram_table.csv
 models/Spacy_lg
+

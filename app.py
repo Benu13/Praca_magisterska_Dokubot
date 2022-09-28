@@ -136,6 +136,7 @@ def get_bot_response():
                 stage = 'check_validity'
 
         if stage == 'check_validity':
+            dd = Dialog
             if Dialog.essence[current_essence]['doc_types']:
                 if len(Dialog.essence[current_essence]['doc_types']) > 1:
                     if (len(Dialog.essence[current_essence]['doc_types']) !=
