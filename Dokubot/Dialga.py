@@ -49,11 +49,8 @@ def text_cleaner(text: str) -> str:
 
     #text = text.translate(str.maketrans('', '', digits)) # remove digits
     #text = text.translate(str.maketrans('', '','!@#$%^&*()[]{};/<>`~-=_+|')) # remove punctuation
-    text = text.replace(r"!?@#$%^&*()[]{};/<>\|`~-=_+", "")
+    text = text.replace(r"!?@#$%^&*()[]{};/<>\|`~-=_+.", "")
     text = text.replace(r",", ", ")
-    # text = text.replace(u'\n', u' ')
-    #text = text.replace(u'�', u' ') # custom
-    #text = text.replace(u'–', u' ') # remove - because it's not in string.punctuation
     text = text.lower() # lowercase text
     text = ' '.join(text.split()) # remove unnecessary whitespaces
 
@@ -68,23 +65,23 @@ ask_for_doc = ["To co podać?", "No to jaki dokumencik?", "No to czego szukamy t
 greet_reactions = [":)", ":-)", ":>", "OwO", "( ͡ʘ ͜ʖ ͡ʘ)", "(͠≖ ͜ʖ͠≖)", "( ͡ᵔ ͜ʖ ͡ᵔ )"]
 UNI_found = ['Nie rozumiem, to w końcu jak ma być: ', "A z tym to jak: ", "Coś jest nie tak, miało być: ", "Bo tutaj jest błąd, chodzi Ci o: "]
 SCL_found = ['Powoli, bo nie rozumiem, o którą wersję Ci chodzi?', "Już już, tylko jak to rozczytać?", "O co dokładnie tutaj chodzi?"]
-wrong_choice = ["Nie ma takiego wyboru leszczu", "XD", "No już już, nie ma testowania", "Bo jeszcze znajdziesz błąd",
+wrong_choice = ["Tylko że taki wybór nie istnieje...", "XD", "No już już, nie ma testowania", "Bo jeszcze znajdziesz błąd",
                 "Opanuj się", "Nie pędź tak proszę, daj odpocząć", "Żart...ale jak to?", "Zagłada przybędzie z kanalizacji",
-                "Ale z ciebie jajcarz hehe"]
+                "Jak to jest być botem, dobrze czy nie dobrze?"]
 no_tags = ['Można wiedzieć o czym?', 'Co dokładnie ma zawierać?', 'O czym szukasz tych dokumentów?',
            'A te dokumenty to o czym dokładnie mają być?']
 prep_ready = ['Oki doki', 'Już szukamy', 'No to działamy', 'Chyba rozumiem', 'Na tropie']
 ask_pref_doc = ['Jakieś konkretne typy dokumentów?', 'Masz może preferencje co do typu dokumentu?', 'Jakiś typ dokumentu czy obojętenie?']
 ask_for_keys = ['Hmm, a o czym dokładnie szukasz tych dokumnetów?', 'Można zapytać o czym?', 'Już się tym zajmuję, tylko powiedz jeszcze o czym?',
                 'Jaki temat tych dokumentów', 'Jakie tagi Cię interesują?', 'Można prosić coś więcej o temacie?']
-dead_end = ['Nie to nie', 'No trudno, bywaj', 'Alright then keep your secrets', 'W porządku', '¯\_(ツ)_/¯', '( ͠° ͟ʖ ͡°)']
-negation = ['nie', 'nope', 'obojętenie', 'nie mam', 'nie wiem', 'nie chcę', 'nie potrzebuję', 'dowolnie', 'zgadnij',
-            'domyśl się', 'nie podam', 'nie powiem', 'nie powiem ci', 'dowolnie', 'nie interesuje mnie to', 'niet',
+dead_end = ['Nie to nie', 'No trudno, bywaj', 'Alright then keep your secrets', 'W porządku', '¯\_(ツ)_/¯', '( ͠° ͟ʖ ͡°)', 'No troszkę niezręczna sytuacja nie powiem (⊙︿⊙ ✿)']
+negation = ['nie', 'nope', 'obojętnie', 'nie mam', 'nie wiem', 'nie chcę', 'nie potrzebuję', 'dowolnie', 'zgadnij',
+            'domyśl się', 'nie podam', 'nie powiem', 'nie powiem ci', 'dowolnie', 'nie interesuje mnie to',
             'bynajmniej', 'nigdy', 'w żdanym razie', 'nie ma mowy', 'jeszcze czego', 'nic z tego', 'nie ma o czym mówić',
             'broń boże', 'absolutnie', 'absolutnie nie', 'nic z tego', 'pod żadnym pozorem']
 
-greet = ['cześć', 'siemka', 'elo elo', 'witam', 'no witam', 'gitara siema', 'czołem', 'siemandero', 'elo', 'hej',
-         'czółko', 'strzałka', 'elo byku', 'elo byq',' dzień dobry', 'dobry', 'witam witam', 'dobry wieczór']
+greet = ['cześć', 'siemka', 'elo elo', 'witam', 'no witam', 'gitara siema', 'czołem', 'siemandero', 'elo', 'hej',"hejo",
+         'czółko', 'strzałka', 'elo byku', 'elo byq',' dzień dobry', 'dobry', 'witam witam', 'dobry wieczór', "no elo"]
 
 select_all = ['wszystkie', 'pokaż wszystkie', 'podeślij wszystkie', 'daj wszystkie', 'mogą być wszystkie', 'pokaż całość',
               'całość', 'każdy', 'pokaż co masz', 'daj wszystko', 'podeślij wszystko', 'pokaż wszystko']
@@ -102,6 +99,7 @@ class Dialog(Dokubot):
         self.Doc_hom_flag = True
         self.LH = LogicHandler()
         self.essence = []
+        self.essence_operators = []
 
         self.doc_established = False
         self.doc_query = None
@@ -149,7 +147,7 @@ class Dialog(Dokubot):
     def doc_all_pref(self, docs):
         if docs:
             for i in range(len(docs)):
-                if docs[i].origin in ['coś', 'czegoś', 'dokument', 'papier']:
+                if docs[i].origin in ['coś', 'czegoś', 'dokument', 'papier', 'cokolwiek', 'pozycja']:
                     if not self.doc_all_flag:
                         self.doc_all_flag = True
                     else:

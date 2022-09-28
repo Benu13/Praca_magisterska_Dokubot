@@ -4,6 +4,8 @@ if __name__ == '__main__':
     nlp = spacy.load('/models/Spacy_lg/')
     words = [('coś', 'sg', 'coś'),
              ('czegoś', 'sg', 'czegoś'),
+             ('pozycja', 'sg', 'pozycja'),
+             ('cokolwiek', 'sg', 'cokolwiek'),
 
              ('dokument', 'sg', 'dokument'),  ('naukowy', 'sg', 'naukowy'),   ('literacki', 'sg', 'literacki'),
              ('dokumentu', 'sg', 'dokument'), ('naukowego', 'sg', 'naukowy'), ('literackiego', 'sg', 'literacki'),

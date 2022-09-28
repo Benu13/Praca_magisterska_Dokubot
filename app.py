@@ -9,7 +9,7 @@ from collections import Counter
 app = Flask(__name__)
 app.config[
     'SQLALCHEMY_DATABASE_URI'] = 'postgresql://txqbllhz:iUCeaEJXQIV9DiFks2gjbTxClw5ssOpx@mouse.db.elephantsql.com/txqbllhz'
-app.config['SECRET_KEY'] = 'SZA2211SCK73XD'
+app.config['SECRET_KEY'] = 'SZA2211SCK78XD'
 db = SQLAlchemy(app)
 app.static_folder = 'static'
 
@@ -21,8 +21,8 @@ config = {
     'spacy_from_path': True,
     'spacy_disable': ["attribute_ruler", "ner", 'tagger', 'parser', 'morphologizer'],
     'paths': {
-        'slot_filler_path':  'models/slot_filer/slot_mimic/mimic_ls2.h5',
-        'slot_lookup_path': 'data/functionalities/lookups/lookup_slot2.json',
+        'slot_filler_path':  'models/slot_filer/mimic_ls10.h5',
+        'slot_lookup_path': 'data/functionalities/lookups/slot_lookup_mimic4.json',
         'choice_lookup_path': 'data/functionalities/lookups/lookup_choice.json',
         'spacy_path': 'models/Spacy_md/',
         'mimic_path': 'models/mimic/mimic_smol/mimic_smol.h5',
@@ -120,35 +120,71 @@ def get_bot_response():
         if stage == 'start' and userText != 'restart':
             if Dialog.isgreet(userText):
                 return jsonify([random.choice(DD.greet_reactions), random.choice(DD.ask_for_doc)])
+            elif len(DD.text_cleaner(userText)) < 2:
+                return jsonify(["╭( ๐_๐)╮", random.choice(DD.ask_for_doc)])
             else:
                 sentence = Dialog.extract(DD.text_cleaner(userText))
                 if debug_s:
                     stage = 'start'
                     return jsonify(["Tokeny: " + ' '.join([w.word for w in sentence.Tokens]) ,"Sloty:" + ' '.join(sentence.sentence_slots)])
 
-
+                Dialog.essence_operators = sentence.essence_operators
                 essence_num = len(sentence.essence) - 1
                 for i in range(essence_num + 1):
                     Dialog.essence.append(sentence.essence[i])
-                stage = 'preprocess_doc'
+
+                stage = 'check_validity'
+
+        if stage == 'check_validity':
+            if Dialog.essence[current_essence]['doc_types']:
+                if len(Dialog.essence[current_essence]['doc_types']) > 1:
+                    if (len(Dialog.essence[current_essence]['doc_types']) !=
+                            len(Dialog.essence[current_essence]['doc_operators']) + 1):
+                        if current_essence == 0:
+                            stage = 'start'
+                            return jsonify(["Wybacz nie rozumiem polecenia!", "Chyba brakło ci spójnika między dwoma typami dokumentów."])
+                        else:
+                            stage = 'start'
+                            return jsonify(["Wybacz nie rozumiem tej części polecenia!"])
+            if Dialog.essence[current_essence]['keywords']:
+                if len(Dialog.essence[current_essence]['keywords']) > 1:
+                    if (len(Dialog.essence[current_essence]['keywords']) !=
+                            len(Dialog.essence[current_essence]['key_operators']) + 1):
+                        if current_essence == 0:
+                            stage = 'start'
+                            return jsonify(["Wybacz nie rozumiem polecenia!", "Chyba brakło ci spójnika między dwoma kluczami."])
+                        else:
+                            stage = 'start'
+                            return jsonify(["Wybacz nie rozumiem tej części polecenia!"])
+
+            if essence_num > 0 and current_essence <= essence_num-1:
+                if not Dialog.essence[current_essence+1]['keywords']:
+                    Dialog.essence[current_essence]['doc_types'].extend(Dialog.essence[current_essence+1]['doc_types'])
+                    Dialog.essence[current_essence]['doc_operators'].append(Dialog.essence_operators[current_essence])
+                    essence_num -= 1
+                    Dialog.essence[current_essence+1].pop()
+
+            stage = 'preprocess_doc'
 
         if stage == 'preprocess_doc':
             uni_type = 'docs'
-            if Dialog.doc_logic[0] != 'CL':
-                Dialog.doc_logic = Dialog.LH.solve(Dialog.essence[current_essence]['doc_types'],
-                                                   Dialog.essence[current_essence]['doc_operators'])
-                if Dialog.doc_logic[0] == 'UNI':
-                    UNI_questions = service_question_UNI(Dialog.doc_logic, Dialog.essence[current_essence], 'docs')
-                    stage = 'ask_solution_UNI'
+            Dialog.doc_logic = ('CL', [])
+            stage = 'preprocess_key'
+            #if Dialog.doc_logic[0] != 'CL':
+            #    Dialog.doc_logic = Dialog.LH.solve(Dialog.essence[current_essence]['doc_types'],
+            #                                       Dialog.essence[current_essence]['doc_operators'])
+            #    if Dialog.doc_logic[0] == 'UNI':
+            #        UNI_questions = service_question_UNI(Dialog.doc_logic, Dialog.essence[current_essence], 'docs')
+            #        stage = 'ask_solution_UNI'
 
-                if Dialog.doc_logic[0] == 'NO':
-                    Dialog.doc_logic = ('CL', [])
+            #    if Dialog.doc_logic[0] == 'NO':
+            #        Dialog.doc_logic = ('CL', [])
 
-                if Dialog.doc_logic[0] == 'SCL':
-                    stage = 'ask_solution_SCL'
-            else:
-                Dialog.doc_logic_all.append(Dialog.doc_logic)
-                stage = 'preprocess_key'
+            #    if Dialog.doc_logic[0] == 'SCL':
+            #        stage = 'ask_solution_SCL'
+            #else:
+            #    Dialog.doc_logic_all.append(Dialog.doc_logic)
+            #    stage = 'preprocess_key'
 
         if stage == 'preprocess_key':
             uni_type = 'keys'
@@ -177,10 +213,10 @@ def get_bot_response():
                 Dialog.doc_all_pref(Dialog.essence[current_essence]['doc_types'])
             if not Dialog.doc_pref and not pref_doc_asked:
                 stage = 'ask_pref_doc'
-                return random.choice(DD.ask_pref_doc)
+                return jsonify([random.choice(DD.ask_pref_doc), "wpisz jeden typ np. 'książka' lub całym zdaniem", "np. szukam książki lub dokumentu"])
             elif Dialog.doc_logic[1] and not Dialog.key_logic[1]:
                 stage = 'ask_keys'
-                return random.choice(DD.ask_for_keys)
+                return jsonify([random.choice(DD.ask_for_keys), "Wpisz całym zdaniem jak coś bo inaczej nie zrozumiem","np. może być coś o kotach"])
             else:
                 stage = 'search_narrowing'
 
@@ -200,7 +236,7 @@ def get_bot_response():
                 found_data, count, frequent = Dialog.prep_query_data(req, all_keys)
                 if found_data.empty:
                     return jsonify(["Niestety nie udało sie znaleźć żadnych dokumentów w tym temacie, wybacz.",
-                                    "Jak to mawia kowal:", "Zawiedzliśmy.", "( ͡° ͜ʖ ~)",
+                                    "Jak to mawia pewien kowal:", "Zawiedliśmy.", "( ͡° ͜ʖ ~)",
                                     "Wpisz restart żeby zacząć od początku!"])
 
                 found_updated = found_data.sort_values('score', ascending=False)
@@ -252,12 +288,12 @@ def get_bot_response():
                     return jsonify([question, "1. " + found_updated.title.iloc[0] + "; Wskaźnik: " + str(
                         found_updated.score.iloc[0])] + out)
 
-            if count < 5:
+            if count < 10:
                 stage = 'list_results'
                 question += "podesłać wszystkie czy tylko najlepszy?"
                 return question
 
-            elif count >= 5 and frequent[0][1] > 1:
+            elif count >= 10 and frequent[0][1] > 1:
                 stage = 'search_results'
                 question += 'co teraz robimy?'
                 qq = [question, "1. Pokaż kilka najlepszych", "2. Dodaj tag", "3. Pomóż mi zawęzić wyszukiwanie",
@@ -301,7 +337,7 @@ def get_bot_response():
 
         if stage == 'add_tag':
             df_added_tag = filter_in_data(found_updated, userText.lower())
-            if df_added_tag is not None:
+            if not df_added_tag.empty:
                 found_updated = df_added_tag
                 all_keys.append(userText.lower())
                 frequent = Counter(get_keys_from_pd(found_updated, all_keys)).most_common()
@@ -319,10 +355,14 @@ def get_bot_response():
 
         if stage == 'help_narrow_ask':
             if frequent:
-                if frequent[0][1] > 1 and frequent[0][1] != len(found_updated):
-                    question = "Czy dokument którego szukasz powinien zawierać tag '%s' czy nie?" % frequent[0][0]
-                    stage = 'help_narrow_answer'
-                    return jsonify([question, "tak/nie/nie wiem/powrót"])
+                if frequent[0][1] > 1:
+                    if frequent[0][1] != len(found_updated):
+                        question = "Czy dokument którego szukasz powinien zawierać tag '%s' czy nie?" % frequent[0][0]
+                        stage = 'help_narrow_answer'
+                        return jsonify([question, "tak/nie/nie wiem/powrót"])
+                    else:
+                        userText = 'nie wiem'
+                        stage = 'help_narrow_answer'
                 else:
                     stage = 'search_narrowing'
             else:
@@ -353,7 +393,7 @@ def get_bot_response():
             ut = userText.lower().split(' ')
             if userText.lower() == 'dalej' and current_essence < essence_num:
                 current_essence += 1
-                stage = 'preprocess_doc'
+                stage = 'check_validity'
                 found_data = None
                 found_updated = None
                 frequent = None
@@ -401,8 +441,8 @@ def get_bot_response():
                 doc_num = 1
                 if Dialog.doc_pref and Dialog.doc_all_flag:
                     for preffered in Dialog.doc_pref:
-                        best = found_updated[found_updated.type == 'preffered']
-                        if len(best) > 0:
+                        best = found_updated[found_updated.type == preffered]
+                        if not best.empty:
                             s = "Najlepszy dokument typu: %s" % preffered
                             answer.extend([s, str(doc_num) + ". " + best.title.iloc[0] + "; Wskaźnik: " + str(
                                 best.score.iloc[0])])
@@ -413,7 +453,7 @@ def get_bot_response():
                             answer.append(s)
 
                     if found_updated.type.iloc[0] not in Dialog.doc_pref:
-                        s = "Najlepszy dokument z poza preferowanych typów: "
+                        s = "Najlepszy dokument spoza preferowanych typów: "
                         answer.extend([s, str(doc_num) + ". " + found_updated.title.iloc[0] + "; Wskaźnik: " + str(
                             found_updated.score.iloc[0])])
                         doc_ids.append(found_updated.id.iloc[0])
@@ -512,7 +552,7 @@ def get_bot_response():
 
         # preprocess stages
         if stage == 'ask_solution_UNI':
-            question = [random.choice(DD.UNI_found)]
+            question = [random.choice(DD.UNI_found), "(musisz wybrać numerek)"]
             for j in UNI_questions[0][2]:
                 question.append(str(j[0]) + ". " + j[2])
             stage = 'answer_solution_UNI'
@@ -529,7 +569,7 @@ def get_bot_response():
             solved, solution = service_solution_UNI(UNI_questions[0], Dialog.essence[current_essence], uni_type,
                                                     userText)
             if not solved:
-                return solution
+                return jsonify(solution)
             else:
                 Dialog.essence[current_essence] = solution
                 UNI_questions.pop(0)
@@ -602,7 +642,7 @@ def service_solution_UNI(choice, essence, op_type, user_choice):
     try:
         uc_int = int(user_choice)
         if uc_int not in range(1, choice[1]):
-            return False, random.choice(DD.wrong_choice)
+            return False, [random.choice(DD.wrong_choice), "Po prostu wybierz numerek"]
         else:
             essence[operators][choice[0]].logic = choice[2][uc_int - 1][1]
             if choice[2][uc_int - 1][1] == 'OR':

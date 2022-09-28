@@ -184,7 +184,7 @@ class Sentence():
         return self.Tokens[ind]
 
     def extract_data_ff(self, lookup_docs=None, lookup_choice=None, type='lev'):
-        search_for = {'doc_types': None, 'form': None, 'keywords': None, 'key_operators': None, 'doc_operators': None}
+        search_for = {'doc_types': None, 'form': None, 'keywords': None, 'key_operators': [], 'doc_operators': []}
         doc_types = []
         doc_type = []
         keywords = []
@@ -204,7 +204,7 @@ class Sentence():
 
                     if key_operators:
                         if len(key_operators) != len(keywords):
-                            self.essence_operators.append("AMB")
+                            self.essence_operators.append(LogicToken.artifical("OR"))
                         else:
                             self.essence_operators.append(key_operators.pop())
 
