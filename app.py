@@ -21,13 +21,13 @@ config = {
     'spacy_from_path': True,
     'spacy_disable': ["attribute_ruler", "ner", 'tagger', 'parser', 'morphologizer'],
     'paths': {
-        'slot_filler_path':  'models/slot_filer/mimic_ls10.h5',
-        'slot_lookup_path': 'data/functionalities/lookups/slot_lookup_mimic4.json',
-        'choice_lookup_path': 'data/functionalities/lookups/lookup_choice.json',
-        'spacy_path': 'models/Spacy_md/',
-        'mimic_path': 'models/mimic/mimic_smol/mimic_smol.h5',
-        'char2tok_path': 'models/mimic/mimic_smol/char_tokenizer_mimic_smol.json',
-        'misspell_lookup_path': 'data/functionalities/lookups/lookup_docs.json'
+        'slot_filler_path':  'Models_deploy/mimic_ls11.h5',
+        'slot_lookup_path': 'Models_deploy/slot_lookup_mimic4.json',
+        'choice_lookup_path': 'Models_deploy/lookup_choice.json',
+        'spacy_path': 'Models_deploy/Spacy_md/',
+        'mimic_path': 'Models_deploy/mimic_super_smol.h5',
+        'char2tok_path': 'Models_deploy/char_tok_small.json',
+        'misspell_lookup_path': 'Models_deploy/lookup_docs.json'
     }
 
 }
@@ -502,6 +502,7 @@ def get_bot_response():
                     return jsonify(docs_found + out)
 
             else:
+                stage = "list_results"
                 return "Wybacz, nie zrozumiałem jeśli chcesz wszystkie wpisz 'wszystkie' jeśli najlepszy wpisz 'najlepszy'."
 
         # Getting additional information from user

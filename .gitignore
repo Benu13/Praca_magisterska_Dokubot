@@ -1,5 +1,6 @@
 # Default ignored files
 /shelf/
+Dokubot/__pycache__
 __pycache__
 /workspace.xml
 /data
