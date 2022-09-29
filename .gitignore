@@ -1,6 +1,7 @@
 # Default ignored files
 /shelf/
 Dokubot/__pycache__
+Dokubot/TrainModel
 __pycache__
 /workspace.xml
 /data
