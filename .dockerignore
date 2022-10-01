@@ -10,7 +10,6 @@ data/processed_text
 data/questions
 data/raw_text
 data/tables
-
 polish_articles_urls.txt
 tfidf.py
 preprocess_data.py
@@ -19,14 +18,7 @@ create_database.py
 data_acquisition.py
 Question_generator
 create_database.py
-models/Spacy_lg
-models/mimic/mimic_large
-models/mimic/mimic_medium
-models/slot_filer/slot_none
-models/slot_filer/slot_ones
-models/slot_filer/slot_mimic
-models/slot_filler/mimic_ls9.h5
-models/CountVectorizer
+models
 preprocess
 data_logs
 tests

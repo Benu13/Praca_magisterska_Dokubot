@@ -75,7 +75,7 @@ ask_pref_doc = ['Jakieś konkretne typy dokumentów?', 'Masz może preferencje c
 ask_for_keys = ['Hmm, a o czym dokładnie szukasz tych dokumnetów?', 'Można zapytać o czym?', 'Już się tym zajmuję, tylko powiedz jeszcze o czym?',
                 'Jaki temat tych dokumentów', 'Jakie tagi Cię interesują?', 'Można prosić coś więcej o temacie?']
 dead_end = ['Nie to nie', 'No trudno, bywaj', 'Alright then keep your secrets', 'W porządku', '¯\_(ツ)_/¯', '( ͠° ͟ʖ ͡°)', 'No troszkę niezręczna sytuacja nie powiem (⊙︿⊙ ✿)']
-negation = ['nie', 'nope', 'obojętnie', 'nie mam', 'nie wiem', 'nie chcę', 'nie potrzebuję', 'dowolnie', 'zgadnij',
+negation = ['nie', 'nope', 'obojętnie', 'obojętne','nie mam', 'nie wiem', 'nie chcę', 'nie potrzebuję', 'dowolnie', 'zgadnij',
             'domyśl się', 'nie podam', 'nie powiem', 'nie powiem ci', 'dowolnie', 'nie interesuje mnie to',
             'bynajmniej', 'nigdy', 'w żdanym razie', 'nie ma mowy', 'jeszcze czego', 'nic z tego', 'nie ma o czym mówić',
             'broń boże', 'absolutnie', 'absolutnie nie', 'nic z tego', 'pod żadnym pozorem']
@@ -84,7 +84,7 @@ greet = ['cześć', 'siemka', 'elo elo', 'witam', 'no witam', 'gitara siema', 'c
          'czółko', 'strzałka', 'elo byku', 'elo byq',' dzień dobry', 'dobry', 'witam witam', 'dobry wieczór', "no elo"]
 
 select_all = ['wszystkie', 'pokaż wszystkie', 'podeślij wszystkie', 'daj wszystkie', 'mogą być wszystkie', 'pokaż całość',
-              'całość', 'każdy', 'pokaż co masz', 'daj wszystko', 'podeślij wszystko', 'pokaż wszystko']
+              'całość', 'każdy', 'pokaż co masz', 'daj wszystko', 'podeślij wszystko', 'pokaż wszystko', "wszystko"]
 select_best = ['daj nalepszy', 'podeślij najlepszy', 'najbardziej pasujący', 'najlepszy', 'tylko najlepszy', 'pokaż mi tylko najlepszy',
                'daj mi tylko najlepszy', 'podeślij mi najbardziej pasujący', 'podeślij mi najlepszy', 'daj mi najlepszy',
                'daj mi najbardziej pasujący']
@@ -94,66 +94,21 @@ class Dialog(Dokubot):
 
     def __init__(self, config):
         super().__init__(config)
-        self.end_session = False
-        self.doc_form = None
-        self.Doc_hom_flag = True
         self.LH = LogicHandler()
-        self.essence = []
-        self.essence_operators = []
 
-        self.doc_established = False
-        self.doc_query = None
-        self.doc_all_flag = False
-        self.doc_pref = []
-        self.doc_logic = ['None']
-        self.doc_logic_all = []
-
-        self.key_logic = ['None']
-        self.key_established = False
-        self.key_query = None
-        self.key_logic_all = []
-
-    def reset(self):
-        self.end_session = False
-        self.doc_form = None
-        self.Doc_hom_flag = True
-        self.LH = LogicHandler()
-        self.essence = []
-
-        self.doc_established = False
-        self.doc_query = None
-        self.doc_all_flag = False
-        self.doc_pref = []
-        self.doc_logic = ['None']
-        self.doc_logic_all = []
-
-        self.key_logic = ['None']
-        self.key_established = False
-        self.key_query = None
-        self.key_logic_all = []
-
-    def soft_reset(self):
-        self.doc_form = None
-        self.doc_established = False
-        self.doc_query = None
-        self.doc_all_flag = False
-        self.doc_pref = []
-        self.doc_logic = ['None']
-        self.key_logic = ['None']
-        self.key_established = False
-        self.key_query = None
-
-
-    def doc_all_pref(self, docs):
+    def doc_all_pref(self, docs, doc_all_flag):
+        doc_pref =[]
+        all_F = doc_all_flag
         if docs:
             for i in range(len(docs)):
                 if docs[i].origin in ['coś', 'czegoś', 'dokument', 'papier', 'cokolwiek', 'pozycja']:
-                    if not self.doc_all_flag:
-                        self.doc_all_flag = True
+                    if not doc_all_flag:
+                        all_F = True
                     else:
                         pass
                 else:
-                    self.doc_pref.append(docs[i].origin)
+                    doc_pref.append(docs[i].origin)
+        return doc_pref, all_F
 
     def isnegation(self, text):
         if text.lower() in negation:
@@ -252,12 +207,12 @@ class Dialog(Dokubot):
         else:
             return None
 
-    def keys_to_query(self):
+    def keys_to_query(self, key_logic):
         sql_query = """SELECT "Document".* FROM "Document"  WHERE """
         sql_query_key = """(EXISTS (SELECT 1 FROM "Keyword" WHERE "Document".id = "Keyword".document_id AND "Keyword"."key" = '%s'))"""
 
         prepr_q = []
-        for keyw in self.key_logic[1]:
+        for keyw in key_logic[1]:
             if isinstance(keyw, KeyToken):
                 if len(keyw.tokens) > 2:
                     prepr_q.extend(self.long_key_recombobulator(keyw))
