@@ -3,12 +3,57 @@ import tensorflow as tf
 import pandas as pd
 import spacy
 import statistics
-from LoadModels import Mimic
 from sklearn.model_selection import train_test_split
+import json
+
+def pad_array(word, length):
+    word_padded = np.zeros([1, length]).astype(np.int32)
+    if len(word[0]) > length:
+        word_padded[0][:] = word[0][0:length]
+    else:
+        word_padded[0][0:len(word[0])] = word[0]
+    return word_padded
+
+
+class Mimic(object):
+
+    @classmethod
+    def load(cls, mimic_path, tokenizer_path):
+        mimic_model = tf.keras.models.load_model(mimic_path,
+                                                 custom_objects = {'euclidean_distance': cls.euclidean_distance})
+        with open(tokenizer_path, encoding='utf-8-sig') as f:
+            data = json.load(f)
+        char_tokenizer = tf.keras.preprocessing.text.tokenizer_from_json(data)
+        return cls(mimic_model, char_tokenizer)
+
+    def euclidean_distance(cls, y_true, y_pred):
+        return K.sqrt(K.sum(K.square(y_true - y_pred), axis=-1, keepdims=True))
+
+    def __init__(self, mimic_model, char_tokenizer):
+        self._mimic_model = mimic_model
+        self._char_tokenizer = char_tokenizer
+        self.max_word_len = self._mimic_model.layers[0].output_shape[0][1]
+
+    def __call__(self, doc):
+        for token in doc:
+            if token.is_oov:
+                word_tokenized = self._char_tokenizer.texts_to_sequences([token.chars])
+                token.chars_tokens = pad_array(word_tokenized, self.max_word_len)
+                token.vector = self._mimic_model.predict(token.chars_tokens,verbose=0).reshape((-1,))
+        #return doc
+
+    def predict_from_word(self, word):
+        chars = list(word)
+        word_tokenized = self._char_tokenizer.texts_to_sequences([chars])
+        word_padded = pad_array(word_tokenized, self.max_word_len)
+        vector = self._mimic_model.predict(word_padded, verbose=0)
+        return vector
+
 
 class SlotData():
     def __init__(self, question_path, mimic_path, tokenizer_path, max_sentence_length=30, spacy_path = None, spacy_size='lg', OOV_initial='mean',):
-        self.mimic = Mimic.load(mimic_path, tokenizer_path)
+        if OOV_initial == 'mimic':
+          self.mimic = Mimic.load(mimic_path, tokenizer_path)
         self.spacy_path = spacy_path
         self.spacy_size = spacy_size
         self.max_sentence_length = max_sentence_length
@@ -29,6 +74,9 @@ class SlotData():
             elif spacy_size == 'md':
                 self.nlp = spacy.load('pl_core_news_md', disable=["attribute_ruler", "ner", 'tagger',
                                                                   'parser', 'morphologizer'])
+            elif spacy_size == 'sm':
+                self.nlp = spacy.load('pl_core_news_sm', exclude=["attribute_ruler", "ner", 'tagger',
+                                                                  'parser', 'morphologizer'])
         self.X_data = None
         self.Y_data = None
 
@@ -44,6 +92,7 @@ class SlotData():
         slot_data['slots_list'] = slot_data['slots'].apply(eval)
         slot_data.drop_duplicates(subset=['sentence'])
         self.data_len = slot_data.shape[0]
+        #print(slot_data.head())
         return slot_data
 
     def prepare_slot_data(self, drop_bad_tokenization=True, OOV_initial = 'mean'):
@@ -51,7 +100,12 @@ class SlotData():
         complete_tokenization_accuracy = []
         spacy_tokenization = []
         sentence_vectors = []
+        curr = 0
+        lennnl = len(self.slot_data.index)
         for index, sentence in self.slot_data.iterrows():
+            if curr % 200 == 0:
+              print(curr, "/", lennnl)
+            curr += 1
             spacy_text = self.nlp(sentence['sentence'])
             spacy_tokens = [token.text for token in spacy_text]
             sentence_tokens = sentence['tokens_list']
@@ -68,13 +122,20 @@ class SlotData():
                     if not token.is_oov:
                         word_vectors[i, :] = token.vector.tolist()
                     else:
-                        if OOV_initial == 'mean':
-                            word_vectors[i, :] = np.mean(word_vectors[0:i, :], axis=0)
+                        if OOV_initial == 'random':
+                            word_vectors[i, :] = np.random.rand(1,self.embedding_dimention) *1
+
                         elif OOV_initial == 'mimic':
                             word_vectors[i, :] = self.mimic.predict_from_word(token.text)[0]
+                            #print(token.text,word_vectors[i, :])
+                        elif OOV_initial == 'none':
+                           word_vectors[i, :] = np.ones([1,self.embedding_dimention])
 
                     i = i + 1
             else:
+                #print(spacy_tokens)
+                #print(sentence_tokens)
+
                 complete_tokenization_accuracy.append(0)
 
             sentence_vectors.append(word_vectors)
@@ -103,9 +164,9 @@ class SlotData():
 
     def prepare_slot_tokenizer(self):
         slot_list = self.Y_data
-        slot_tokenizer = tf.keras.preprocessing.text.Tokenizer(lower=False)
+        slot_tokenizer = tf.keras.preprocessing.text.Tokenizer(lower=True)
         slot_tokenizer.fit_on_texts(list(slot_list))
-        Y_data = slot_tokenizer.texts_to_sequences(list(slot_list ))
+        Y_data = slot_tokenizer.texts_to_sequences(list(slot_list))
         # Pad slot data
         Y_data_padded = np.zeros([len(Y_data), self.max_sentence_length])
         for i in range(len(Y_data)):
@@ -134,82 +195,15 @@ class SlotData():
 
         return X_train, X_test, y_train, y_test
 
-if __name__ == '__main__':
-    sot_data = SlotData("/data/questions/dokubot_slot_data4.csv",
-                        'C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/models/Mimic/mimic.h5',
-                        "C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/models/Char_tokenizer/char_tokenizer_992.json",
-                        spacy_path="C:/Users/Bennu/Desktop/Praca magisterska/Dokubot/models/Spacy_lg/")
 
+if __name__ == '__main__':
+
+    train_data_table = pd.DataFrame(columns=['tokens', 'vectors', 'slots'])
+    train_data_table.to_csv(encoding='utf-8-sig')
+
+    sot_data = SlotData("/content/drive/MyDrive/Dokubot/Questions/dokubot_slot_questions18.csv",
+                        '/content/drive/MyDrive/Dokubot/mimic/mimic_medium/mimic_super_smol.h5',
+                        "/content/drive/MyDrive/Dokubot/char_tokenizer_md.json",
+                        OOV_initial='mimic', spacy_size='sm')
 
     X_train, X_test, y_train, y_test = sot_data.get_train_test_data()
-
-    # Set training parameters
-    loss = tf.keras.losses.CategoricalCrossentropy()
-    metrics = [tf.keras.metrics.Precision(), tf.keras.metrics.Recall(), 'accuracy']
-    epochs = 10
-    optimizer = tf.keras.optimizers.Adam(
-        learning_rate=0.0001,
-        beta_1=0.9,
-        beta_2=0.999,
-        epsilon=1e-07,
-        amsgrad=False,
-        name="Adam"
-    )
-    denselayer = tf.keras.layers.Dense(8, activation='softmax')
-
-    ### MODEL CREATION ###
-    # Input for word vectors
-    input = tf.keras.Input(shape=(30, 300), dtype="float32")
-
-    # Next, we add a masking layer to innform model that some part of the data is
-    # actually a padding and should be ignored
-
-    mask = tf.keras.layers.Masking(mask_value=0.)(input)
-    BiLSTM = tf.keras.layers.Bidirectional(
-        layer=tf.keras.layers.LSTM(
-            units=124,
-            activation="relu",
-            recurrent_activation="tanh",
-            use_bias=True,
-            kernel_initializer="glorot_uniform",
-            recurrent_initializer="orthogonal",
-            bias_initializer="zeros",
-            unit_forget_bias=True,
-            kernel_regularizer=None,
-            recurrent_regularizer=None,
-            bias_regularizer=None,
-            activity_regularizer=None,
-            kernel_constraint=None,
-            recurrent_constraint=None,
-            bias_constraint=None,
-            dropout=0.5,
-            recurrent_dropout=0.2,
-            return_sequences=True,
-        )
-    )(mask)
-
-    drop = tf.keras.layers.Dropout(0.2)(BiLSTM)
-
-    x = tf.keras.layers.MultiHeadAttention(num_heads=6, key_dim=30)(drop, drop)
-
-    # Add&Norm
-    x = tf.keras.layers.Add()([x, BiLSTM])
-    x = tf.keras.layers.LayerNormalization()(x)
-
-    output = denselayer(x)
-
-    # model = tf.keras.Model(input, output)
-
-    # Compile the model with set paramethers.
-    model1 = tf.keras.Model(input, output)
-    model1.compile(optimizer=optimizer, loss=loss, metrics=metrics)
-
-    model1.summary()
-
-    # Fit the model
-    VAL_SPLIT = 0.1
-    BATCH_SIZE = 32
-    EPOCHS = 50
-
-    history1 = model1.fit(x=X_train, y=y_train, batch_size=BATCH_SIZE, epochs=EPOCHS,
-                          validation_split=VAL_SPLIT)
