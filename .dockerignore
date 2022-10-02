@@ -6,10 +6,7 @@
 .ipynb_checkpoints
 __pycache__
 create_lookup
-data/processed_text
-data/questions
-data/raw_text
-data/tables
+data
 polish_articles_urls.txt
 tfidf.py
 preprocess_data.py

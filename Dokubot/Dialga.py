@@ -173,9 +173,15 @@ class Dialog(Dokubot):
         if len(fs) > 1:
             out = ["("]
             for i in range(len(fs)-1):
-                out.append(fs[i])
+                if isinstance(fs[i], list):
+                    out.extend(fs[i])
+                else:
+                    out.append(fs[i])
                 out.append(LogicToken.artifical(logic="OR"))
-            out.append(fs[-1])
+            if isinstance(fs[-1], list):
+                out.extend(fs[-1])
+            else:
+                out.append(fs[-1])
             out.append(")")
         else:
             out = fs[0]

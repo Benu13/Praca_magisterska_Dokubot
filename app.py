@@ -24,7 +24,7 @@ config = {
     'spacy_from_path': True,
     'spacy_disable': ["attribute_ruler", "ner", 'tagger', 'parser', 'morphologizer'],
     'paths': {
-        'slot_filler_path':  'Models_deploy/mimic_ls11.h5',
+        'slot_filler_path':  'Models_deploy/mimic_ls14.h5',
         'slot_lookup_path': 'Models_deploy/slot_lookup_mimic4.json',
         'choice_lookup_path': 'Models_deploy/lookup_choice.json',
         'spacy_path': 'Models_deploy/Spacy_md/',
