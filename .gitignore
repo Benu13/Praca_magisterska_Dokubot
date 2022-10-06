@@ -1,5 +1,8 @@
 # Default ignored files
 /shelf/
+.idea
+Question_generator/.ipynb_checkpoints
+preprocess/__pycache__
 __pycache__
 /workspace.xml
 data/raw_text
