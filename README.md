@@ -1,5 +1,5 @@
 # Dokubot
-Language of communication: Polish.  
+Chatbot for intelligent document searching in polish language. 
   
 ## Goal  
 The purpose of the work is to create a chatbot system that allows intelligent search of documents. The chatbot should understand the user's commands and respond accordingly.   It was assumed that, receiving a sentence containing requirements from the user, the bot should correctly extract the words that have meaning in the statement. In addition to 
