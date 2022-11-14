@@ -13,4 +13,3 @@ This repository contains all files used for creation of document recommending ch
 -> Code for data preprocessing  
 -> Code for database creation  
 -> Code for creating questions for model training  
--> PDF of thesis in polish language  
