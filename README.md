@@ -13,3 +13,6 @@ This repository contains all files used for creation of document recommending ch
 -> Code for data preprocessing  
 -> Code for database creation  
 -> Code for creating questions for model training  
+
+Creation and training of networks was done using GoogleColab (Files in repo are not valid):  
+https://colab.research.google.com/drive/1z6WoUWEg6kNRVPlmXfZxiJT3Es31EVFs
