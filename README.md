@@ -22,7 +22,7 @@ https://colab.research.google.com/drive/1z6WoUWEg6kNRVPlmXfZxiJT3Es31EVFs
 ## Pozyskanie danych
 Dokumenty pozyskano ze strony CEON.  
 
-Pozyskane metadane:
+Pozyskane metadane:  
 -> Identyfikator  
 -> Tytuł  
 -> Autorzy  
@@ -38,17 +38,21 @@ Schemat pozyskania danych:
   
 ## Budowa czatbota:  
   
-![image](https://user-images.githubusercontent.com/39136856/201992061-b03ae557-c7ca-46c1-9fb8-76b4273c1f81.png)
-  
+![image](https://user-images.githubusercontent.com/39136856/202146440-3dd056f4-446b-4ba5-9d6f-6ea617a08562.png)
+   
   
 ## Moduł zrozumienia języka:
+Moduł zrozumienia języka pozwala na ekstrakcję najważniejszych informacji zawartych w zdaniu wprowadzonym przez użytkownika. Rolą tego modułu jest wyznaczenie, które informacje w zdaniu opisują typy dokumentów lub klucze które powinien on zawierać.
+  
 Schemat modułu zrozumienia języka:
   
-![image](https://user-images.githubusercontent.com/39136856/201992369-c27c15a0-7730-475b-9662-a3ef33d86666.png)
+![image](https://user-images.githubusercontent.com/39136856/202146834-a6008bac-2bff-4fb8-a0cc-34ee692b8b6d.png)
+
+Proces ekstrakcji informacji rozpoczyna się po otrzymaniu wiadomości od użytkownika. Pierwszym etapem jest wykorzystanie SpaCy w celu tokenizacji otrzymanego zdania. Każdy token następnie jest wektoryzowany oraz lematyzowany z wykorzystaniem tablic dołączanych do modelu SpaCy. Następnie zwektoryzowany tekst zostaje przekazany do funkcji obsługującej słowa OOV która uzupełnia wektory dla słów spoza słownika SpaCy. Przygotowane w ten sposób wektory przekazywane są do modelu Slot filler który znajduje na ich podstawie wyrażenia określające typy dokumentów, słowa klucze oraz spójniki występujące w zdaniu. Otrzymane sloty zostają następnie przekazane do funkcji poprawy słów która dla każdego wykrytego w zdaniu typu dokumentu przypisuje jego poprawną wersję z wykorzystaniem przygotowanej tablicy dokumentów. W ten sam sposób poprawiane są także spójniki którym dodatkowo przypisywana jest także operacja logiczna zdefiniowana w tablicy opratorów. Po wykonaniu wszystkich operacji moduł zwraca poprawione zdanie wraz z odpowiednio przypisanymi informacjami dodatkowymi, sloty oraz leksemy.
   
- Schemat sieci MIMIC-RNN:  
+Schemat sieci MIMIC-RNN:  
    
- ![image](https://user-images.githubusercontent.com/39136856/201992615-129414f0-b09a-481d-a02d-363d244fba70.png)
+![image](https://user-images.githubusercontent.com/39136856/202147322-560baace-d512-4374-9d17-55f45f236899.png)
   
   
 Schemat sieci slot-fillera:  
@@ -57,7 +61,32 @@ Schemat sieci slot-fillera:
   
   
 ## Genarator pytań
+W celu utworzenia bazy treningowej do modelu slot fillera stworzony został program pozwalający na generowanie przykładowych zapytań oraz żądań dotyczących polecenia lub znalezienia dokumentu zawierającego dane klucze. Program ten oprócz wygenerowanego automatycznie zapytania zwracał także odpowiadającą mu tokenizacje oraz wektor odpowiednich slotów. Przyjęta podstawowa budowa zapytania przedstawia się następująco:  
+  
+[Początek polecenia][część dokumentowa][orzeczenie][część kluczowa]
+  
+Program polegał na odpowiednim wyborze każdej z części zapytania w kolejności od początku polecenia do części kluczowej z uwzględnieniem odpowiedniej akomodacji syntaktycznej między każdą z części.
 
+  
+Przedstawienie procesu dopasowywania części dokumentowej do początku zapytania:  
+  
+![image](https://user-images.githubusercontent.com/39136856/202148353-f850c0f3-d5cd-4e8d-b3a7-b4029af2d1a7.png)
+  
+  
+Przykład dołączenia członu nadrzędnego grupy syntatkycznej orzeczenia do części dokumentowej:  
+  
+  ![image](https://user-images.githubusercontent.com/39136856/202148620-9d63dacf-022e-463f-aaf6-1c209a39204d.png)
+  
+  
+Algorytm dodawania wyrazów do orzeczenia:  
+  
+![image](https://user-images.githubusercontent.com/39136856/202148752-347ba975-dc0d-47fd-ad23-1b2b3d30c53b.png)
+
+Przykładowe pytania:  
+  
+![image](https://user-images.githubusercontent.com/39136856/202148939-985d755b-3298-48e7-8021-378995802d0b.png)
+  
+  
 ## Menadżer logiki
 
 Schemat menadżera logiki:
@@ -73,7 +102,4 @@ Opcje po wstępnym znalezieniu wyników:
   
 Uproszczony schemat przebiegu rozmowy:  
 ![image](https://user-images.githubusercontent.com/39136856/201993836-2cfe0fd8-aa93-455b-afb8-8ab96aa7935a.png)
-  
-  
-## Odpowiedzi
   
