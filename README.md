@@ -84,7 +84,7 @@ Algorytm dodawania wyrazów do orzeczenia:
 
 Przykładowe pytania:  
   
-![image](https://user-images.githubusercontent.com/39136856/202148939-985d755b-3298-48e7-8021-378995802d0b.png)
+![image](https://user-images.githubusercontent.com/39136856/202149798-93d90613-4b70-4f78-9d01-2f1d2c1b2513.png)
   
   
 ## Menadżer logiki
